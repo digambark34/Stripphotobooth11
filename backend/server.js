@@ -4,6 +4,7 @@ const cors = require("cors");
 const mongoose = require("mongoose");
 const stripRoutes = require("./routes/stripRoutes");
 const authRoutes = require("./routes/authRoutes");
+const settingsRoutes = require("./routes/settingsRoutes");
 const cleanup = require("./utils/cleanup");
 
 // ✅ Fix: Set strictQuery AFTER mongoose import
@@ -66,6 +67,7 @@ app.get('/health', (_req, res) => {
 // ✅ API Routes
 app.use("/api/strips", stripRoutes);
 app.use("/api/auth", authRoutes);
+app.use("/api/settings", settingsRoutes);
 
 // ✅ 404 Handler
 app.use('*', (_req, res) => {

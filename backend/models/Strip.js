@@ -26,26 +26,17 @@ const StripSchema = new mongoose.Schema({
     default: false,
     index: true
   },
-  customBackground: {
-    type: Object,
-    validate: {
-      validator: function(v) {
-        if (!v) return true;
-        return v.type && v.value;
-      },
-      message: 'Custom background must have type and value'
-    }
-  },
-  logo: {
+  template: {
     type: String,
     validate: {
       validator: function(v) {
         if (!v) return true;
-        return /^https?:\/\/.+/.test(v);
+        return /^data:image\//.test(v) || /^https?:\/\/.+/.test(v);
       },
-      message: 'Logo must be a valid URL'
+      message: 'Template must be a valid image data URL or URL'
     }
-  }
+  },
+
 }, {
   timestamps: true,
   toJSON: { virtuals: true },

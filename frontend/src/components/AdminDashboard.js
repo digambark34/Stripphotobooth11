@@ -11,8 +11,7 @@ export default function AdminDashboard() {
   const [notification, setNotification] = useState(null);
   const [settings, setSettings] = useState({
     eventName: '',
-    background: { type: 'color', value: '#ff0000' },
-    logo: null
+    template: null // Template image instead of background color
   });
   const [showSettings, setShowSettings] = useState(false);
 
@@ -49,35 +48,66 @@ export default function AdminDashboard() {
     }));
   };
 
-  const handleLogoUpload = (event) => {
+
+
+  const handleTemplateUpload = async (event) => {
     const file = event.target.files[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setSettings(prev => ({
-          ...prev,
-          logo: e.target.result
-        }));
-      };
-      reader.readAsDataURL(file);
+      try {
+        setLoading(true);
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          try {
+            // Store template as data URL to avoid CORS issues
+            // This ensures the template is always same-origin for canvas operations
+            setSettings(prev => ({
+              ...prev,
+              template: e.target.result // Store as data URL directly
+            }));
+
+            setNotification({
+              type: 'success',
+              message: '🖼️ Template uploaded successfully!'
+            });
+            setTimeout(() => setNotification(null), 3000);
+          } catch (error) {
+            console.error('Template upload failed:', error);
+            setNotification({
+              type: 'error',
+              message: '❌ Failed to upload template. Please try again.'
+            });
+            setTimeout(() => setNotification(null), 3000);
+          } finally {
+            setLoading(false);
+          }
+        };
+        reader.readAsDataURL(file);
+      } catch (error) {
+        setLoading(false);
+        setNotification({
+          type: 'error',
+          message: '❌ Failed to read template file.'
+        });
+        setTimeout(() => setNotification(null), 3000);
+      }
     }
   };
 
-  const deleteLogo = () => {
-    if (window.confirm('Are you sure you want to delete the logo? This action cannot be undone.')) {
+  const deleteTemplate = () => {
+    if (window.confirm('Are you sure you want to delete the template? This action cannot be undone.')) {
       setSettings(prev => ({
         ...prev,
-        logo: null
+        template: null
       }));
       // Clear the file input
-      const fileInput = document.getElementById('logoUpload');
+      const fileInput = document.getElementById('templateUpload');
       if (fileInput) {
         fileInput.value = '';
       }
       // Show success notification
       setNotification({
         type: 'success',
-        message: '🗑️ Logo deleted successfully!'
+        message: '🗑️ Template deleted successfully!'
       });
       setTimeout(() => setNotification(null), 3000);
     }
@@ -124,6 +154,29 @@ export default function AdminDashboard() {
       load();
     } catch (error) {
       setError(`Failed to delete strip: ${error.response?.data?.message || error.message}`);
+    }
+  };
+
+  const deleteAllStrips = async () => {
+    if (strips.length === 0) {
+      setNotification({ type: 'info', message: 'ℹ️ No strips to delete' });
+      return;
+    }
+
+    const confirmMessage = `⚠️ Are you sure you want to delete ALL ${strips.length} strips?\n\nThis action cannot be undone and will permanently delete all photo strips and their images from Cloudinary.`;
+
+    if (!window.confirm(confirmMessage)) return;
+
+    try {
+      setLoading(true);
+      await axios.delete(`${API_BASE_URL}/api/strips/all`);
+      setNotification({ type: 'success', message: `✅ Successfully deleted all ${strips.length} strips` });
+      setStrips([]); // Clear the strips array immediately
+      load(); // Reload to confirm
+    } catch (error) {
+      setError(`Failed to delete all strips: ${error.response?.data?.message || error.message}`);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -330,58 +383,15 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
-                {/* Enhanced Background Color */}
+                {/* Enhanced Template Upload */}
                 <div className="bg-white/5 backdrop-blur-lg rounded-2xl p-6 border border-white/10 hover:border-white/20 transition-all duration-300 group">
                   <label className="flex items-center text-white font-bold mb-4 text-lg">
                     <div className="bg-gradient-to-r from-pink-400 to-red-400 p-3 rounded-xl mr-4 shadow-lg group-hover:scale-110 transition-transform duration-300">
-                      <span className="text-xl">🎨</span>
-                    </div>
-                    <div>
-                      <span>Strip Background Color</span>
-                      <span className="text-white/60 text-sm font-normal block">Color behind photos in the strip</span>
-                    </div>
-                  </label>
-                  <div className="flex items-center space-x-6">
-                    <div className="relative group/color">
-                      <div
-                        className="w-24 h-16 rounded-2xl border-4 border-white/30 cursor-pointer shadow-xl hover:scale-105 transition-all duration-300 relative overflow-hidden"
-                        style={{ backgroundColor: settings.background.value }}
-                        onClick={() => document.getElementById('colorPicker').click()}
-                      >
-                        <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover/color:opacity-100 transition-opacity duration-300"></div>
-                      </div>
-                      <input
-                        id="colorPicker"
-                        type="color"
-                        value={settings.background.value}
-                        onChange={(e) => handleSettingsChange('background', { type: 'color', value: e.target.value })}
-                        className="hidden"
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <div className="bg-white/10 backdrop-blur-lg rounded-xl px-6 py-4 border border-white/20">
-                        <p className="text-white/80 text-sm font-medium mb-2">Current Color:</p>
-                        <input
-                          type="text"
-                          value={settings.background.value}
-                          onChange={(e) => handleSettingsChange('background', { type: 'color', value: e.target.value })}
-                          className="w-full bg-transparent text-white font-mono text-lg focus:outline-none"
-                          placeholder="#000000"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Enhanced Logo Upload */}
-                <div className="bg-white/5 backdrop-blur-lg rounded-2xl p-6 border border-white/10 hover:border-white/20 transition-all duration-300 group">
-                  <label className="flex items-center text-white font-bold mb-4 text-lg">
-                    <div className="bg-gradient-to-r from-blue-400 to-cyan-400 p-3 rounded-xl mr-4 shadow-lg group-hover:scale-110 transition-transform duration-300">
                       <span className="text-xl">🖼️</span>
                     </div>
                     <div>
-                      <span>Logo Upload</span>
-                      <span className="text-white/60 text-sm font-normal block">Optional - appears on photo strips</span>
+                      <span>Strip Template</span>
+                      <span className="text-white/60 text-sm font-normal block">Upload custom template background (JPEG, PNG, etc.)</span>
                     </div>
                   </label>
 
@@ -389,48 +399,49 @@ export default function AdminDashboard() {
                     <input
                       type="file"
                       accept="image/*"
-                      onChange={handleLogoUpload}
+                      onChange={handleTemplateUpload}
                       className="hidden"
-                      id="logoUpload"
+                      id="templateUpload"
                     />
                     <label
-                      htmlFor="logoUpload"
-                      className="px-6 py-3 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-400/30 rounded-xl text-white cursor-pointer hover:from-blue-500/30 hover:to-cyan-500/30 transition-all duration-300 text-sm sm:text-base font-medium shadow-lg hover:shadow-xl transform hover:scale-105"
+                      htmlFor="templateUpload"
+                      className="px-6 py-3 bg-gradient-to-r from-pink-500/20 to-red-500/20 border border-pink-400/30 rounded-xl text-white cursor-pointer hover:from-pink-500/30 hover:to-red-500/30 transition-all duration-300 text-sm sm:text-base font-medium shadow-lg hover:shadow-xl transform hover:scale-105"
                     >
-                      📁 Choose File
+                      📁 Choose Template
                     </label>
 
-                    {settings.logo && (
+                    {settings.template && (
                       <button
-                        onClick={deleteLogo}
+                        onClick={deleteTemplate}
                         className="px-6 py-3 bg-gradient-to-r from-red-500/80 to-pink-500/80 hover:from-red-600/90 hover:to-pink-600/90 border border-red-400/50 rounded-xl text-white transition-all duration-300 text-sm sm:text-base font-medium shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95"
-                        title="Delete logo permanently"
+                        title="Delete template permanently"
                       >
-                        🗑️ Delete
+                        🗑️ Delete Template
                       </button>
                     )}
 
                     <div className="bg-white/10 backdrop-blur-lg rounded-xl px-4 py-2 border border-white/20">
                       <span className="text-white/80 text-sm font-medium">
-                        {settings.logo ? '✅ Logo uploaded' : '📄 No file chosen'}
+                        {settings.template ? '✅ Template uploaded' : '📄 No template chosen'}
                       </span>
                     </div>
                   </div>
 
-                  {settings.logo && (
-                    <div className="mt-6 p-4 bg-white/10 backdrop-blur-lg rounded-xl border border-white/20">
-                      <p className="text-white text-sm mb-3 font-medium flex items-center">
-                        <span className="mr-2">📷</span>
-                        Logo Preview:
-                      </p>
-                      <img
-                        src={settings.logo}
-                        alt="Logo preview"
-                        className="h-20 w-auto rounded-lg shadow-xl border-2 border-white/30 hover:scale-105 transition-transform duration-300"
-                      />
+                  {settings.template && (
+                    <div className="mt-4 p-4 bg-white/5 rounded-xl border border-white/10">
+                      <p className="text-white/80 text-sm font-medium mb-2">Template Preview:</p>
+                      <div className="w-32 h-48 bg-white/10 rounded-lg overflow-hidden border border-white/20">
+                        <img
+                          src={settings.template}
+                          alt="Template preview"
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
                     </div>
                   )}
                 </div>
+
+
 
                 {/* Enhanced Save Button */}
                 <div className="flex justify-center pt-6">
@@ -539,6 +550,17 @@ export default function AdminDashboard() {
             <span className="hidden sm:inline">📷 Go to Camera</span>
             <span className="sm:hidden">📷 Camera</span>
           </button>
+
+          {strips.length > 0 && (
+            <button
+              onClick={deleteAllStrips}
+              disabled={loading}
+              className="px-3 sm:px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 disabled:from-gray-500 disabled:to-gray-600 text-white rounded-lg sm:rounded-xl font-semibold text-sm sm:text-base transition-all duration-300 transform hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:transform-none"
+            >
+              <span className="hidden sm:inline">🗑️ Delete All ({strips.length})</span>
+              <span className="sm:hidden">🗑️ All</span>
+            </button>
+          )}
         </div>
 
         {/* Strips Grid */}

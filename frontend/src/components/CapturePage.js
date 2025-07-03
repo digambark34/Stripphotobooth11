@@ -9,8 +9,7 @@ export default function CapturePage() {
   const [countdown, setCountdown] = useState(null);
   const [settings, setSettings] = useState({
     eventName: '',
-    background: { type: 'color', value: '#ff0000' },
-    logo: null
+    template: null // Template image instead of background color
   });
   const [notification, setNotification] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -21,7 +20,7 @@ export default function CapturePage() {
 
 
 
-  // Initialize canvas with background - 600×1800 pixels at 300 DPI (2×6 inch)
+  // Initialize canvas with template background - 600×1800 pixels at 300 DPI (2×6 inch)
   const initializeCanvas = useCallback(() => {
     if (canvasRef.current) {
       const ctx = canvasRef.current.getContext("2d");
@@ -34,41 +33,62 @@ export default function CapturePage() {
       // Clear entire canvas
       ctx.clearRect(0, 0, width, height);
 
-      // Apply background color to entire strip (will show in gaps/edges)
-      const bgColor = settings.background?.value || '#ff0000';
-      ctx.fillStyle = bgColor;
-      ctx.fillRect(0, 0, width, height);
-
-      // Photo boxes will be drawn on top, covering most of the background
-      // Background will only be visible at edges and any small gaps
+      // Apply template background if available (this is the colorful design)
+      if (settings.template) {
+        console.log('🖼️ Loading template:', settings.template.substring(0, 50) + '...');
+        const templateImg = new Image();
+        templateImg.crossOrigin = 'anonymous'; // Enable CORS for Cloudinary images
+        templateImg.onload = () => {
+          console.log('✅ Template loaded successfully, drawing to canvas');
+          // Draw template background to fill entire canvas
+          ctx.drawImage(templateImg, 0, 0, width, height);
+        };
+        templateImg.onerror = () => {
+          console.error('❌ Failed to load template image');
+          // Fallback to white background
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, width, height);
+        };
+        templateImg.src = settings.template;
+      } else {
+        console.log('⚠️ No template found, using white background');
+        // Fallback: white background if no template
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, width, height);
+      }
     }
-  }, [settings.background?.value]);
+  }, [settings.template]);
 
   // Load settings from localStorage
   useEffect(() => {
     try {
       const savedSettings = localStorage.getItem('photoBoothSettings');
+      console.log('🔍 Loading settings from localStorage:', savedSettings);
+
       if (savedSettings) {
         const parsedSettings = JSON.parse(savedSettings);
+        console.log('✅ Parsed settings:', parsedSettings);
+        console.log('🖼️ Template status:', parsedSettings.template ? 'Template found' : 'No template');
         setSettings(parsedSettings);
+      } else {
+        console.log('⚠️ No saved settings found in localStorage');
       }
     } catch (error) {
-      console.error('Error loading settings:', error);
+      console.error('❌ Error loading settings:', error);
       // Reset to default settings if parsing fails
       setSettings({
         eventName: '',
-        background: { type: 'color', value: '#ff0000' },
-        logo: null
+        template: null
       });
     }
   }, []);
 
   // Initialize canvas when settings change
   useEffect(() => {
-    if (canvasRef.current && settings.background?.value) {
+    if (canvasRef.current) {
       initializeCanvas();
     }
-  }, [settings.background?.value, initializeCanvas]);
+  }, [settings.template, initializeCanvas]);
 
   useEffect(() => {
     navigator.mediaDevices
@@ -121,21 +141,24 @@ export default function CapturePage() {
 
   const takePhoto = () => {
     const ctx = canvasRef.current.getContext("2d");
-    const stripWidth = 600;   // 2 inches × 300 DPI
-    const stripHeight = 1800; // 6 inches × 300 DPI
 
-    // Create gaps between photos: 10px margin on all sides, 5px between photos
-    const margin = 10;        // Margin from strip edges
-    const gap = 5;           // Gap between photos
-    const photoWidth = stripWidth - (2 * margin);  // 580px wide
-    const photoHeight = (stripHeight - (2 * margin) - (2 * gap)) / 3; // ~588px tall each
+    // Photo box positioning to EXACTLY match template photo areas
+    // Template gradient should be visible in ALL gaps and borders
+    const photoWidth = 480;   // Exact photo area width (fits template boxes perfectly)
+    const photoHeight = 480;  // Exact photo area height (fits template boxes perfectly)
+    const photoX = 60;        // Centered X position (aligned with template photo areas)
 
-    // Calculate Y position for current photo with gaps
-    const photoY = margin + (steps * (photoHeight + gap));
-    const photoX = margin;
+    // Y positions for each photo box (EXACT template photo area alignment)
+    const photoPositions = [
+      120,  // First photo box Y position (top) - aligned with template box
+      690,  // Second photo box Y position (middle) - aligned with template box
+      1260  // Third photo box Y position (bottom) - aligned with template box
+    ];
 
-    // Background color is already applied to entire strip
-    // Photos will be drawn on top, leaving background visible in gaps
+    const photoY = photoPositions[steps] || photoPositions[0];
+
+    // Template background is preserved in all borders and gaps
+    // Only the exact photo areas will be filled with captured photos
 
     // Capture current photo from video - SMART capture with gaps
     const tempCanvas = document.createElement('canvas');
@@ -147,51 +170,47 @@ export default function CapturePage() {
     const videoWidth = videoRef.current.videoWidth || videoRef.current.clientWidth;
     const videoHeight = videoRef.current.videoHeight || videoRef.current.clientHeight;
 
-    // Debug: Log dimensions to verify SMART capture with gaps
-    console.log('📸 SMART capture with gaps at 300 DPI:', {
+    // Debug: Log dimensions to verify SMART FILL capture
+    console.log('📸 SMART FILL capture at 300 DPI:', {
       videoWidth,
       videoHeight,
       photoWidth,
       photoHeight,
       photoX,
       photoY,
-      margin,
-      gap,
       step: steps + 1,
       physicalSize: '2×6 inches',
-      smartMode: 'Everyone captured + background gaps visible'
+      captureMode: 'SMART FILL - Complete box fill with template gradient preserved'
     });
 
-    // Strategy: Use "object-fit: cover" approach to capture ALL people
-    // This maintains aspect ratio while ensuring the entire frame is captured
+    // Strategy: SMART FILL - Capture ALL people while completely filling the box
+    // This ensures EVERYONE is visible AND the entire box is filled with photo content
 
     if (videoWidth && videoHeight) {
-      // Smart scaling: Try to capture everyone while filling the photo area
+      // SMART FILL mode: Fill entire box while keeping all people visible
       const scaleX = photoWidth / videoWidth;
       const scaleY = photoHeight / videoHeight;
 
-      // Use a balanced approach: prefer fitting everyone, but allow slight cropping if needed
-      const fitScale = Math.min(scaleX, scaleY); // Fits everyone completely
-      const fillScale = Math.max(scaleX, scaleY); // Fills photo area completely
+      // Use COVER scale but with intelligent cropping to keep people visible
+      const scale = Math.max(scaleX, scaleY); // Fill entire box completely
 
-      // Use fit scale if the difference isn't too large, otherwise use a compromise
-      const scaleDifference = fillScale / fitScale;
-      const scale = scaleDifference > 1.3 ? fitScale : fillScale; // Allow up to 30% difference
-
-      // Calculate dimensions and centering
+      // Calculate dimensions
       const scaledWidth = videoWidth * scale;
       const scaledHeight = videoHeight * scale;
-      const offsetX = (photoWidth - scaledWidth) / 2;
-      const offsetY = (photoHeight - scaledHeight) / 2;
 
-      // Draw the video frame with smart scaling
+      // Smart centering: Adjust offset to keep people in frame
+      // Prefer slight top bias to keep faces visible
+      const offsetX = (photoWidth - scaledWidth) / 2;
+      const offsetY = Math.min((photoHeight - scaledHeight) / 2, 0); // Slight top bias
+
+      // Draw the video frame with SMART FILL scaling (fills entire box + shows people)
       tempCtx.drawImage(
         videoRef.current,
         0, 0, videoWidth, videoHeight, // Source: ENTIRE video frame
-        offsetX, offsetY, scaledWidth, scaledHeight // Destination: Smart scaled
+        offsetX, offsetY, scaledWidth, scaledHeight // Destination: SMART FILL - no empty space
       );
 
-      console.log(`📸 Smart scaling: fit=${fitScale.toFixed(3)}, fill=${fillScale.toFixed(3)}, used=${scale.toFixed(3)}, mode=${scale === fitScale ? 'FIT_ALL' : 'FILL_BOX'}`);
+      console.log(`📸 SMART FILL mode: scale=${scale.toFixed(3)} - Box completely filled (${scaledWidth.toFixed(0)}×${scaledHeight.toFixed(0)} covering ${photoWidth}×${photoHeight} box)`);
     } else {
       // Fallback: Direct capture if dimensions not available
       tempCtx.drawImage(
@@ -200,37 +219,39 @@ export default function CapturePage() {
       );
     }
 
-    // Store the captured photo data
-    const photoData = tempCanvas.toDataURL();
-    setCapturedPhotos(prev => [...prev, photoData]);
+    // Store the captured photo data for redrawing with template
+    const capturedPhotoData = tempCanvas.toDataURL();
+    const newCapturedPhotos = [...capturedPhotos, { data: capturedPhotoData, x: photoX, y: photoY }];
+    setCapturedPhotos(newCapturedPhotos);
 
-    // Draw the captured photo from tempCanvas to the main canvas at correct position with gaps
-    ctx.drawImage(tempCanvas, photoX, photoY);
+    // Redraw everything: template background + all photos to preserve gradient
+    if (settings.template) {
+      const templateImg = new Image();
+      templateImg.crossOrigin = 'anonymous'; // Enable CORS for Cloudinary images
+      templateImg.onload = () => {
+        // First: Draw template background to fill entire canvas (preserves gradient)
+        ctx.drawImage(templateImg, 0, 0, 600, 1800);
 
-    console.log(`✅ Photo ${steps + 1} placed in box ${steps + 1} at position: X=${photoX}px, Y=${photoY}px (with ${margin}px margins and ${gap}px gaps)`);
-
-    // Optional logo overlay - positioned on current photo with gaps
-    if (settings.logo) {
-      const img = new Image();
-      img.src = settings.logo; // settings.logo is already a base64 string
-      img.onload = () => {
-        // Place logo on the current photo being captured (with gap positioning)
-        const logoX = photoX + 15; // 15px from photo left edge
-        const logoY = photoY + 15; // 15px from photo top edge
-        ctx.drawImage(img, logoX, logoY, 125, 62);
+        // Then: Draw all captured photos on top (preserves template in gaps)
+        newCapturedPhotos.forEach(photo => {
+          const photoImg = new Image();
+          photoImg.crossOrigin = 'anonymous'; // Enable CORS for photo data URLs
+          photoImg.onload = () => {
+            ctx.drawImage(photoImg, photo.x, photo.y);
+          };
+          photoImg.src = photo.data;
+        });
       };
+      templateImg.src = settings.template;
+    } else {
+      // If no template, just draw the current photo
+      ctx.drawImage(tempCanvas, photoX, photoY);
     }
 
-    // Optional event name text on last step - positioned at bottom of strip
-    if (steps === 2 && settings.eventName) {
-      ctx.fillStyle = "#ffffff";
-      ctx.font = "30px sans-serif"; // Larger font for higher resolution
-      const textX = stripWidth / 2; // Center horizontally
-      const textY = stripHeight - margin - 10; // 10px above bottom margin
-      ctx.textAlign = "center";
-      ctx.fillText(settings.eventName, textX, textY);
-      ctx.textAlign = "left"; // Reset alignment
-    }
+    const boxNames = ['FIRST BOX (TOP)', 'SECOND BOX (MIDDLE)', 'THIRD BOX (BOTTOM)'];
+    console.log(`✅ Photo ${steps + 1} placed in ${boxNames[steps]} at position: X=${photoX}px, Y=${photoY}px`);
+
+    // No logo overlay - clean template with photos only
 
     setSteps(steps + 1);
   };
@@ -247,8 +268,7 @@ export default function CapturePage() {
       await axios.post(`${API_BASE_URL}/api/strips`, {
         image: dataUrl,
         eventName: settings.eventName,
-        background: settings.background,
-        logo: settings.logo,
+        template: settings.template
       });
 
       setNotification({
@@ -361,15 +381,7 @@ export default function CapturePage() {
                 </div>
               )}
 
-              {/* Capture Instructions */}
-              <div className="absolute bottom-4 left-4 right-4 bg-black/60 backdrop-blur-sm rounded-xl p-3 text-center">
-                <p className="text-white text-sm font-medium">
-                  👥 <span className="text-green-300">Everyone captured + boxes filled!</span>
-                </p>
-                <p className="text-white/70 text-xs mt-1">
-                  Smart capture • 600×1800px (300 DPI) • 2×6 inch strip
-                </p>
-              </div>
+
             </div>
 
             {/* Enhanced Progress indicator */}

@@ -3,7 +3,7 @@ const cloudinary = require('../config/cloudinary');
 
 exports.uploadStrip = async (req, res) => {
   try {
-    const { image, eventName, background, logo } = req.body;
+    const { image, eventName, template } = req.body;
 
     // ✅ Enhanced Validation
     if (!image) {
@@ -23,24 +23,13 @@ exports.uploadStrip = async (req, res) => {
 
     console.log(`✅ Strip uploaded to Cloudinary: ${uploadResult.secure_url}`);
 
-    // ✅ (Optional) Handle logo upload to Cloudinary
-    let logoUrl = null;
-    if (logo && logo.startsWith('data:image/')) {
-      const logoUploadResult = await cloudinary.uploader.upload(logo, {
-        folder: 'strip-photobooth/logos',
-        public_id: `logo_${Date.now()}`,
-        resource_type: 'image'
-      });
-      logoUrl = logoUploadResult.secure_url;
-      console.log(`✅ Logo uploaded to Cloudinary: ${logoUrl}`);
-    }
+
 
     // ✅ Save to MongoDB
     const newStrip = new Strip({
       imageUrl: uploadResult.secure_url,
       eventName,
-      customBackground: background,
-      logo: logoUrl,
+      template: template
     });
 
     await newStrip.save();
@@ -49,7 +38,6 @@ exports.uploadStrip = async (req, res) => {
     res.status(201).json({
       message: "✅ Upload successful",
       imageUrl: uploadResult.secure_url,
-      logoUrl: logoUrl,
       stripId: newStrip._id,
     });
 
@@ -112,13 +100,7 @@ exports.deleteStrip = async (req, res) => {
       console.log(`✅ Deleted image from Cloudinary: ${fullPublicId}`);
     }
 
-    if (strip.logo) {
-      // Extract public_id from Cloudinary URL
-      const logoPublicId = strip.logo.split('/').pop().split('.')[0];
-      const fullLogoPublicId = `strip-photobooth/logos/${logoPublicId}`;
-      await cloudinary.uploader.destroy(fullLogoPublicId);
-      console.log(`✅ Deleted logo from Cloudinary: ${fullLogoPublicId}`);
-    }
+
 
     // Delete from database
     await Strip.findByIdAndDelete(id);
@@ -134,6 +116,56 @@ exports.deleteStrip = async (req, res) => {
 
     res.status(500).json({
       message: "❌ Error deleting strip",
+      error: process.env.NODE_ENV === 'development' ? error.message : "Server error"
+    });
+  }
+};
+
+exports.deleteAllStrips = async (req, res) => {
+  try {
+    // Get all strips to delete their Cloudinary images
+    const strips = await Strip.find({});
+
+    if (strips.length === 0) {
+      return res.json({ message: "ℹ️ No strips found to delete" });
+    }
+
+    console.log(`🗑️ Starting deletion of ${strips.length} strips...`);
+
+    // Delete all images from Cloudinary
+    let deletedImages = 0;
+
+    for (const strip of strips) {
+      // Delete main image from Cloudinary
+      if (strip.imageUrl) {
+        try {
+          const publicId = strip.imageUrl.split('/').pop().split('.')[0];
+          const fullPublicId = `strip-photobooth/${publicId}`;
+          await cloudinary.uploader.destroy(fullPublicId);
+          deletedImages++;
+          console.log(`✅ Deleted image from Cloudinary: ${fullPublicId}`);
+        } catch (error) {
+          console.warn(`⚠️ Failed to delete image from Cloudinary: ${error.message}`);
+        }
+      }
+    }
+
+    // Delete all strips from database
+    const deleteResult = await Strip.deleteMany({});
+    console.log(`✅ Deleted ${deleteResult.deletedCount} strips from database`);
+
+    res.json({
+      message: `✅ Successfully deleted all ${deleteResult.deletedCount} strips`,
+      details: {
+        stripsDeleted: deleteResult.deletedCount,
+        imagesDeleted: deletedImages
+      }
+    });
+  } catch (error) {
+    console.error("❌ Error deleting all strips:", error);
+
+    res.status(500).json({
+      message: "❌ Error deleting all strips",
       error: process.env.NODE_ENV === 'development' ? error.message : "Server error"
     });
   }
