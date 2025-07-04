@@ -1,6 +1,5 @@
 import { useRef, useState, useEffect, useCallback } from "react";
 import axios from "axios";
-import '../responsive.css';
 
 export default function CapturePage() {
   const videoRef = useRef(null);
@@ -42,12 +41,16 @@ export default function CapturePage() {
           console.log('✅ Template loaded successfully, drawing to canvas');
           // Draw template background to fill entire canvas
           ctx.drawImage(templateImg, 0, 0, width, height);
+          // Add beautiful text overlay
+          addBeautifulText(ctx);
         };
         templateImg.onerror = () => {
           console.error('❌ Failed to load template image');
           // Fallback to white background
           ctx.fillStyle = '#ffffff';
           ctx.fillRect(0, 0, width, height);
+          // Add beautiful text even on fallback
+          addBeautifulText(ctx);
         };
         templateImg.src = settings.template;
       } else {
@@ -55,40 +58,244 @@ export default function CapturePage() {
         // Fallback: white background if no template
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, width, height);
+        // Add beautiful text on white background
+        addBeautifulText(ctx);
       }
     }
   }, [settings.template]);
 
-  // Load settings from localStorage
-  useEffect(() => {
+  // Load settings from backend API
+  const loadSettings = useCallback(async () => {
     try {
-      const savedSettings = localStorage.getItem('photoBoothSettings');
-      console.log('🔍 Loading settings from localStorage:', savedSettings);
+      console.log('🔍 Loading settings from backend API...');
+      const response = await axios.get(`${API_BASE_URL}/api/settings`);
 
-      if (savedSettings) {
-        const parsedSettings = JSON.parse(savedSettings);
-        console.log('✅ Parsed settings:', parsedSettings);
-        console.log('🖼️ Template status:', parsedSettings.template ? 'Template found' : 'No template');
-        setSettings(parsedSettings);
-      } else {
-        console.log('⚠️ No saved settings found in localStorage');
+      const backendSettings = {
+        eventName: response.data.eventName || '',
+        template: response.data.templateUrl || null, // Use templateUrl from backend
+        textStyle: response.data.textStyle || {
+          fontSize: 60, // Bigger default size
+          fontFamily: 'Arial',
+          fontWeight: 'bold',
+          textColor: '#8B5CF6',
+          textShadow: true,
+          textGradient: true,
+          decorativeLine: false // Remove decorative line
+        }
+      };
+
+      console.log('✅ Backend settings loaded:', backendSettings);
+      console.log('🖼️ Template status:', backendSettings.template ? 'Template found' : 'No template');
+      console.log('🎨 Text style from backend:', backendSettings.textStyle);
+      setSettings(backendSettings);
+
+      // Show notification when template is loaded
+      if (backendSettings.template) {
+        setNotification({
+          type: 'success',
+          message: '🖼️ Template loaded successfully!'
+        });
+        setTimeout(() => setNotification(null), 2000);
       }
     } catch (error) {
-      console.error('❌ Error loading settings:', error);
-      // Reset to default settings if parsing fails
-      setSettings({
-        eventName: '',
-        template: null
-      });
+      console.error('❌ Error loading settings from backend:', error);
+
+      // Fallback to localStorage if backend fails
+      try {
+        const savedSettings = localStorage.getItem('photoBoothSettings');
+        if (savedSettings) {
+          const parsedSettings = JSON.parse(savedSettings);
+          console.log('⚠️ Using localStorage fallback:', parsedSettings);
+          setSettings(parsedSettings);
+        } else {
+          console.log('⚠️ No fallback settings found, using defaults');
+          setSettings({
+            eventName: '',
+            template: null
+          });
+        }
+      } catch (fallbackError) {
+        console.error('❌ Fallback also failed:', fallbackError);
+        setSettings({
+          eventName: '',
+          template: null
+        });
+      }
     }
-  }, []);
+  }, [API_BASE_URL]);
+
+  // Load settings on component mount
+  useEffect(() => {
+    loadSettings();
+  }, [loadSettings]);
+
+  // Auto-refresh settings every 10 seconds to catch admin changes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      loadSettings();
+    }, 10000); // Refresh every 10 seconds
+
+    return () => clearInterval(interval);
+  }, [loadSettings]);
 
   // Initialize canvas when settings change
   useEffect(() => {
     if (canvasRef.current) {
+      console.log('🔄 Settings changed, redrawing canvas...');
       initializeCanvas();
     }
-  }, [settings.template, initializeCanvas]);
+  }, [settings.template, settings.textStyle, settings.eventName, initializeCanvas]);
+
+  // Beautiful frames with borders and stylish event name
+  const addBeautifulText = (ctx) => {
+    const canvasWidth = 600;
+    const photoWidth = 500;
+    const photoHeight = 420;
+    const photoX = 50;
+
+    // Photo frame positions
+    const photoPositions = [80, 580, 1080];
+
+    // Add beautiful borders around photo frames (without covering photos)
+    photoPositions.forEach((photoY) => {
+      ctx.save();
+
+      // Draw border as stroke outline instead of filled rectangles
+      // Outer border - gradient stroke
+      const borderGradient = ctx.createLinearGradient(photoX - 6, photoY - 6, photoX + photoWidth + 6, photoY + photoHeight + 6);
+      borderGradient.addColorStop(0, '#8B5CF6'); // Purple
+      borderGradient.addColorStop(0.5, '#EC4899'); // Pink
+      borderGradient.addColorStop(1, '#F59E0B'); // Gold
+
+      ctx.strokeStyle = borderGradient;
+      ctx.lineWidth = 6;
+      ctx.strokeRect(photoX - 3, photoY - 3, photoWidth + 6, photoHeight + 6);
+
+      // Inner border - white stroke
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(photoX - 1, photoY - 1, photoWidth + 2, photoHeight + 2);
+
+      ctx.restore();
+    });
+
+    // Custom stylish event name with user settings
+    if (settings.eventName) {
+      const textAreaY = 1520; // Start text area after last photo
+      const textStyle = settings.textStyle || {
+        fontSize: 60, // Bigger default size
+        fontFamily: 'Arial',
+        fontWeight: 'bold',
+        textColor: '#8B5CF6',
+        textShadow: true,
+        textGradient: true,
+        decorativeLine: false // Remove decorative line
+      };
+
+      console.log('🎨 Applying text styling:', textStyle);
+      console.log('📝 Event name:', settings.eventName);
+      console.log('🔧 Current settings object:', settings);
+      console.log('🎯 Font size from settings:', textStyle.fontSize);
+      console.log('🎯 Font family from settings:', textStyle.fontFamily);
+      console.log('🎯 Text color from settings:', textStyle.textColor);
+
+      // Main title with custom styling
+      ctx.save();
+
+      // Apply gradient or solid color based on user preference
+      if (textStyle.textGradient) {
+        const textGradient = ctx.createLinearGradient(0, textAreaY, canvasWidth, textAreaY + 50);
+        textGradient.addColorStop(0, textStyle.textColor);
+        textGradient.addColorStop(0.5, '#EC4899'); // Pink middle
+        textGradient.addColorStop(1, '#F59E0B'); // Gold end
+        ctx.fillStyle = textGradient;
+        console.log('✨ Applied gradient text effect');
+      } else {
+        ctx.fillStyle = textStyle.textColor;
+        console.log('🎨 Applied solid color:', textStyle.textColor);
+      }
+
+      // Smart font sizing - automatically adjust to fit within strip width
+      const fontFamily = textStyle.fontFamily || 'Arial';
+      let fontSize = textStyle.fontSize || 60;
+      const fontWeight = textStyle.fontWeight || 'bold';
+      const maxWidth = canvasWidth - 40; // Leave 20px margin on each side
+
+      // Start with desired font size and reduce if text doesn't fit
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      let finalFontSize = fontSize;
+      let textWidth = 0;
+
+      // Test different font sizes to find the biggest that fits
+      for (let testSize = fontSize; testSize >= 24; testSize -= 2) {
+        ctx.font = `${fontWeight} ${testSize}px "${fontFamily}", Arial, sans-serif`;
+        textWidth = ctx.measureText(settings.eventName).width;
+
+        if (textWidth <= maxWidth) {
+          finalFontSize = testSize;
+          break;
+        }
+      }
+
+      // Apply the final font size
+      ctx.font = `${fontWeight} ${finalFontSize}px "${fontFamily}", Arial, sans-serif`;
+
+      console.log(`📝 Smart sizing: ${finalFontSize}px (fits in ${maxWidth}px, actual width: ${textWidth.toFixed(0)}px)`);
+
+      // Text shadow based on user preference
+      if (textStyle.textShadow) {
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+        ctx.shadowBlur = Math.max(6, finalFontSize * 0.1);
+        ctx.shadowOffsetX = Math.max(3, finalFontSize * 0.05);
+        ctx.shadowOffsetY = Math.max(3, finalFontSize * 0.05);
+        console.log('🌟 Applied proportional text shadow');
+      } else {
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+      }
+
+      // Draw the text centered
+      ctx.fillText(settings.eventName, canvasWidth / 2, textAreaY + 60);
+      console.log(`✅ Drew main title: "${settings.eventName}" at ${finalFontSize}px`);
+      ctx.restore();
+
+      // No decorative line - cleaner design
+
+      // Date at bottom of strip with more space and bigger size
+      ctx.save();
+      ctx.fillStyle = textStyle.textColor;
+      const dateSize = 32; // Fixed bigger size for better visibility
+      ctx.font = `normal ${dateSize}px "Arial", sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      // Strong shadow for date text visibility
+      if (textStyle.textShadow) {
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+        ctx.shadowBlur = 4;
+        ctx.shadowOffsetX = 2;
+        ctx.shadowOffsetY = 2;
+      }
+
+      // Get current date
+      const currentDate = new Date();
+      const dateString = currentDate.toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+
+      // Position date at bottom of strip with good spacing from event name
+      const dateY = 1750; // Fixed position near bottom of 1800px strip
+      ctx.fillText(dateString, canvasWidth / 2, dateY);
+      console.log(`📅 Drew date: ${dateString} at ${dateSize}px, positioned at bottom Y:${dateY}`);
+      ctx.restore();
+    }
+  };
 
   useEffect(() => {
     navigator.mediaDevices
@@ -142,17 +349,16 @@ export default function CapturePage() {
   const takePhoto = () => {
     const ctx = canvasRef.current.getContext("2d");
 
-    // Photo box positioning to EXACTLY match template photo areas
-    // Template gradient should be visible in ALL gaps and borders
-    const photoWidth = 480;   // Exact photo area width (fits template boxes perfectly)
-    const photoHeight = 480;  // Exact photo area height (fits template boxes perfectly)
-    const photoX = 60;        // Centered X position (aligned with template photo areas)
+    // BIGGER Photo frames with borders - elegant and spacious
+    const photoWidth = 500;   // Bigger width for better presence
+    const photoHeight = 420;  // Bigger height but still leaves space for event name
+    const photoX = 50;        // Centered X position with border space
 
-    // Y positions for each photo box (EXACT template photo area alignment)
+    // Y positions for bigger photo boxes with space for event name at bottom
     const photoPositions = [
-      120,  // First photo box Y position (top) - aligned with template box
-      690,  // Second photo box Y position (middle) - aligned with template box
-      1260  // Third photo box Y position (bottom) - aligned with template box
+      80,   // First photo box Y position (top)
+      580,  // Second photo box Y position (middle)
+      1080  // Third photo box Y position (bottom) - leaves 200px for event name
     ];
 
     const photoY = photoPositions[steps] || photoPositions[0];
@@ -187,30 +393,37 @@ export default function CapturePage() {
     // This ensures EVERYONE is visible AND the entire box is filled with photo content
 
     if (videoWidth && videoHeight) {
-      // SMART FILL mode: Fill entire box while keeping all people visible
-      const scaleX = photoWidth / videoWidth;
-      const scaleY = photoHeight / videoHeight;
+      // SMART STRETCH FILL: Stretch video to fill entire box while keeping all people visible
+      // This approach fills the box completely with photo content (no backgrounds)
 
-      // Use COVER scale but with intelligent cropping to keep people visible
-      const scale = Math.max(scaleX, scaleY); // Fill entire box completely
+      // Calculate aspect ratios
+      const videoAspect = videoWidth / videoHeight;
+      const boxAspect = photoWidth / photoHeight;
 
-      // Calculate dimensions
-      const scaledWidth = videoWidth * scale;
-      const scaledHeight = videoHeight * scale;
+      let sourceX = 0, sourceY = 0, sourceWidth = videoWidth, sourceHeight = videoHeight;
 
-      // Smart centering: Adjust offset to keep people in frame
-      // Prefer slight top bias to keep faces visible
-      const offsetX = (photoWidth - scaledWidth) / 2;
-      const offsetY = Math.min((photoHeight - scaledHeight) / 2, 0); // Slight top bias
+      if (videoAspect > boxAspect) {
+        // Video is wider than box - adjust width to fit all people
+        // Keep full height, crop minimal width from sides
+        const newWidth = videoHeight * boxAspect;
+        sourceX = (videoWidth - newWidth) / 2; // Center crop
+        sourceWidth = newWidth;
+      } else {
+        // Video is taller than box - adjust height to fit all people
+        // Keep full width, crop minimal height from top/bottom
+        const newHeight = videoWidth / boxAspect;
+        sourceY = (videoHeight - newHeight) / 2; // Center crop
+        sourceHeight = newHeight;
+      }
 
-      // Draw the video frame with SMART FILL scaling (fills entire box + shows people)
+      // Draw the intelligently cropped video to fill entire box
       tempCtx.drawImage(
         videoRef.current,
-        0, 0, videoWidth, videoHeight, // Source: ENTIRE video frame
-        offsetX, offsetY, scaledWidth, scaledHeight // Destination: SMART FILL - no empty space
+        sourceX, sourceY, sourceWidth, sourceHeight, // Source: Smart crop to preserve people
+        0, 0, photoWidth, photoHeight // Destination: Fill entire box completely
       );
 
-      console.log(`📸 SMART FILL mode: scale=${scale.toFixed(3)} - Box completely filled (${scaledWidth.toFixed(0)}×${scaledHeight.toFixed(0)} covering ${photoWidth}×${photoHeight} box)`);
+      console.log(`📸 SMART STRETCH mode: Box filled completely with photo content - sourceArea: ${sourceWidth.toFixed(0)}×${sourceHeight.toFixed(0)} → ${photoWidth}×${photoHeight} box`);
     } else {
       // Fallback: Direct capture if dimensions not available
       tempCtx.drawImage(
@@ -224,7 +437,7 @@ export default function CapturePage() {
     const newCapturedPhotos = [...capturedPhotos, { data: capturedPhotoData, x: photoX, y: photoY }];
     setCapturedPhotos(newCapturedPhotos);
 
-    // Redraw everything: template background + all photos to preserve gradient
+    // Redraw everything: template background + all photos + beautiful text
     if (settings.template) {
       const templateImg = new Image();
       templateImg.crossOrigin = 'anonymous'; // Enable CORS for Cloudinary images
@@ -233,19 +446,34 @@ export default function CapturePage() {
         ctx.drawImage(templateImg, 0, 0, 600, 1800);
 
         // Then: Draw all captured photos on top (preserves template in gaps)
+        let photosLoaded = 0;
         newCapturedPhotos.forEach(photo => {
           const photoImg = new Image();
           photoImg.crossOrigin = 'anonymous'; // Enable CORS for photo data URLs
           photoImg.onload = () => {
             ctx.drawImage(photoImg, photo.x, photo.y);
+            photosLoaded++;
+
+            // After all photos are loaded, add beautiful text
+            if (photosLoaded === newCapturedPhotos.length) {
+              addBeautifulText(ctx);
+            }
           };
           photoImg.src = photo.data;
         });
+
+        // If no photos yet, still add text
+        if (newCapturedPhotos.length === 0) {
+          addBeautifulText(ctx);
+        }
       };
       templateImg.src = settings.template;
     } else {
-      // If no template, just draw the current photo
+      // If no template, draw photo and add text on white background
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, 600, 1800);
       ctx.drawImage(tempCanvas, photoX, photoY);
+      addBeautifulText(ctx);
     }
 
     const boxNames = ['FIRST BOX (TOP)', 'SECOND BOX (MIDDLE)', 'THIRD BOX (BOTTOM)'];
@@ -290,6 +518,8 @@ export default function CapturePage() {
     }
   };
 
+
+
   // Auto-hide notification after 5 seconds
   useEffect(() => {
     if (notification) {
@@ -328,6 +558,18 @@ export default function CapturePage() {
           </div>
         </div>
       )}
+
+      {/* Top Right Controls */}
+      <div className="fixed top-6 right-6 z-40">
+        {/* Admin Button */}
+        <button
+          onClick={() => window.location.href = '/admin'}
+          className="px-4 py-2 bg-purple-500/80 hover:bg-purple-600/90 backdrop-blur-lg rounded-xl text-white font-medium transition-all duration-300 transform hover:scale-105 border border-purple-400/50 shadow-lg"
+          title="Go to Admin Dashboard"
+        >
+          ⚙️ Admin
+        </button>
+      </div>
 
       <div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 md:py-12">
         {/* Header */}

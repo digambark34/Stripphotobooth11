@@ -14,6 +14,37 @@ const settingsSchema = new mongoose.Schema({
     type: String,
     default: null
   },
+  // Text styling options
+  textStyle: {
+    fontSize: {
+      type: Number,
+      default: 42
+    },
+    fontFamily: {
+      type: String,
+      default: 'Arial'
+    },
+    fontWeight: {
+      type: String,
+      default: 'bold'
+    },
+    textColor: {
+      type: String,
+      default: '#8B5CF6'
+    },
+    textShadow: {
+      type: Boolean,
+      default: true
+    },
+    textGradient: {
+      type: Boolean,
+      default: true
+    },
+    decorativeLine: {
+      type: Boolean,
+      default: true
+    }
+  },
   // Singleton pattern - only one settings document
   _id: {
     type: String,

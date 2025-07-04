@@ -3,7 +3,7 @@ import axios from "axios";
 import PrintStrip from "./PrintStrip";
 
 export default function AdminDashboard() {
-  const [auth, setAuth] = useState(false);
+  const [auth, setAuth] = useState(true); // Always authenticated - bypass login
   const [strips, setStrips] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -11,40 +11,39 @@ export default function AdminDashboard() {
   const [notification, setNotification] = useState(null);
   const [settings, setSettings] = useState({
     eventName: '',
-    template: null // Template image instead of background color
+    template: null, // Template image instead of background color
+    // Text styling options
+    textStyle: {
+      fontSize: 60, // Bigger default size
+      fontFamily: 'Arial',
+      fontWeight: 'bold',
+      textColor: '#8B5CF6',
+      textShadow: true,
+      textGradient: true,
+      decorativeLine: false // Remove decorative line by default
+    }
   });
   const [showSettings, setShowSettings] = useState(false);
 
   // Fallback API URL if environment variable is not set
   const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
 
-  const login = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const res = await axios.post(`${API_BASE_URL}/api/auth/login`, {
-        username: "admin",
-        password: "secret"
-      });
-
-      if (res.data.success) {
-        setAuth(true);
-        setNotification({ type: 'success', message: '✅ Login successful' });
-      } else {
-        setError('Login failed: Invalid credentials');
-      }
-    } catch (error) {
-      setError(`Login failed: ${error.response?.data?.message || error.message}`);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Login bypassed - direct admin access
 
   const handleSettingsChange = (field, value) => {
     setSettings(prev => ({
       ...prev,
       [field]: value
+    }));
+  };
+
+  const handleTextStyleChange = (styleField, value) => {
+    setSettings(prev => ({
+      ...prev,
+      textStyle: {
+        ...prev.textStyle,
+        [styleField]: value
+      }
     }));
   };
 
@@ -58,23 +57,19 @@ export default function AdminDashboard() {
         const reader = new FileReader();
         reader.onload = async (e) => {
           try {
-            // Store template as data URL to avoid CORS issues
-            // This ensures the template is always same-origin for canvas operations
-            setSettings(prev => ({
-              ...prev,
-              template: e.target.result // Store as data URL directly
-            }));
-
-            setNotification({
-              type: 'success',
-              message: '🖼️ Template uploaded successfully!'
+            // Upload template to backend (MongoDB + Cloudinary)
+            const response = await axios.put(`${API_BASE_URL}/api/settings`, {
+              template: e.target.result // Send as data URL to backend
             });
-            setTimeout(() => setNotification(null), 3000);
+            console.log('✅ Template upload response:', response.data);
+
+            // Reload settings from backend to ensure sync
+            await loadSettings();
           } catch (error) {
             console.error('Template upload failed:', error);
             setNotification({
               type: 'error',
-              message: '❌ Failed to upload template. Please try again.'
+              message: `❌ Failed to upload template: ${error.response?.data?.message || error.message}`
             });
             setTimeout(() => setNotification(null), 3000);
           } finally {
@@ -93,32 +88,96 @@ export default function AdminDashboard() {
     }
   };
 
-  const deleteTemplate = () => {
-    if (window.confirm('Are you sure you want to delete the template? This action cannot be undone.')) {
-      setSettings(prev => ({
-        ...prev,
-        template: null
-      }));
-      // Clear the file input
-      const fileInput = document.getElementById('templateUpload');
-      if (fileInput) {
-        fileInput.value = '';
+  const deleteTemplate = async () => {
+    if (window.confirm('Are you sure you want to delete the template? This will also delete it from Cloudinary. This action cannot be undone.')) {
+      try {
+        setLoading(true);
+
+        // Delete template from backend (MongoDB + Cloudinary)
+        const response = await axios.delete(`${API_BASE_URL}/api/settings/template`);
+        console.log('✅ Template deletion response:', response.data);
+
+        // Reload settings from backend to ensure sync
+        await loadSettings();
+
+        // Clear the file input
+        const fileInput = document.getElementById('templateUpload');
+        if (fileInput) {
+          fileInput.value = '';
+        }
+
+        // Show success notification
+        setNotification({
+          type: 'success',
+          message: '🗑️ Template deleted from MongoDB and Cloudinary successfully!'
+        });
+        setTimeout(() => setNotification(null), 3000);
+      } catch (error) {
+        console.error('Template deletion failed:', error);
+        setNotification({
+          type: 'error',
+          message: `❌ Failed to delete template: ${error.response?.data?.message || error.message}`
+        });
+        setTimeout(() => setNotification(null), 3000);
+      } finally {
+        setLoading(false);
       }
-      // Show success notification
-      setNotification({
-        type: 'success',
-        message: '🗑️ Template deleted successfully!'
-      });
-      setTimeout(() => setNotification(null), 3000);
     }
   };
 
-  const saveSettings = () => {
-    // Save settings to localStorage for now
-    localStorage.setItem('photoBoothSettings', JSON.stringify(settings));
-    setNotification({ type: 'success', message: '⚙️ Settings saved successfully!' });
-    setTimeout(() => setNotification(null), 3000);
+  const saveSettings = async () => {
+    try {
+      setLoading(true);
+
+      // Save settings to backend (MongoDB + Cloudinary if template included)
+      const response = await axios.put(`${API_BASE_URL}/api/settings`, {
+        eventName: settings.eventName,
+        template: settings.template,
+        textStyle: settings.textStyle
+      });
+      console.log('✅ Settings save response:', response.data);
+
+      // Reload settings from backend to ensure sync
+      await loadSettings();
+
+      setNotification({
+        type: 'success',
+        message: '⚙️ Settings saved to MongoDB and Cloudinary successfully!'
+      });
+      setTimeout(() => setNotification(null), 3000);
+    } catch (error) {
+      console.error('Settings save failed:', error);
+      setNotification({
+        type: 'error',
+        message: `❌ Failed to save settings: ${error.response?.data?.message || error.message}`
+      });
+      setTimeout(() => setNotification(null), 3000);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const loadSettings = useCallback(async () => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/api/settings`);
+      setSettings({
+        eventName: response.data.eventName || '',
+        template: response.data.templateUrl || null,
+        textStyle: response.data.textStyle || {
+          fontSize: 60, // Bigger default size
+          fontFamily: 'Arial',
+          fontWeight: 'bold',
+          textColor: '#8B5CF6',
+          textShadow: true,
+          textGradient: true,
+          decorativeLine: false // Remove decorative line
+        }
+      });
+    } catch (error) {
+      console.error('Failed to load settings:', error);
+      // Keep default settings if loading fails
+    }
+  }, [API_BASE_URL]);
 
   const load = useCallback(async () => {
     try {
@@ -142,6 +201,49 @@ export default function AdminDashboard() {
       load();
     } catch (error) {
       setError(`Failed to mark strip: ${error.response?.data?.message || error.message}`);
+    }
+  };
+
+  const downloadAsPDF = async (strip) => {
+    try {
+      setLoading(true);
+
+      // Fetch the image as blob to ensure proper download
+      const response = await fetch(strip.imageUrl);
+      if (!response.ok) {
+        throw new Error('Failed to fetch image');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+
+      // Create download link
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `photo-strip-${strip.eventName || 'untitled'}-${new Date(strip.timestamp).toLocaleDateString().replace(/\//g, '-')}.jpg`;
+
+      // Trigger download
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // Clean up
+      window.URL.revokeObjectURL(url);
+
+      setNotification({
+        type: 'success',
+        message: '📥 Photo strip downloaded successfully to your Downloads folder!'
+      });
+      setTimeout(() => setNotification(null), 3000);
+    } catch (error) {
+      console.error('Download failed:', error);
+      setNotification({
+        type: 'error',
+        message: '❌ Failed to download photo strip. Please try again.'
+      });
+      setTimeout(() => setNotification(null), 3000);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -234,58 +336,14 @@ export default function AdminDashboard() {
       });
   }, [API_BASE_URL]);
 
-  if (!auth) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-        <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-8 sm:py-12 lg:py-16">
-          <div className="max-w-sm sm:max-w-md mx-auto">
-            {/* Header */}
-            <div className="text-center mb-6 sm:mb-8">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
-                <span className="text-2xl sm:text-3xl">🛠️</span>
-              </div>
-              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-2">Admin Dashboard</h1>
-              <p className="text-sm sm:text-base text-gray-300">Secure access required</p>
-            </div>
+  // Load settings when authenticated
+  useEffect(() => {
+    if (auth) {
+      loadSettings();
+    }
+  }, [auth, loadSettings]);
 
-            {/* Login Card */}
-            <div className="bg-white/10 backdrop-blur-lg rounded-xl sm:rounded-2xl p-6 sm:p-8 border border-white/20 shadow-2xl">
-              {error && (
-                <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-red-500/20 border border-red-500/30 text-red-200 rounded-lg sm:rounded-xl">
-                  <div className="flex items-center">
-                    <span className="text-lg sm:text-xl mr-2">⚠️</span>
-                    <span className="text-sm sm:text-base">{error}</span>
-                  </div>
-                </div>
-              )}
-
-              <button
-                onClick={login}
-                disabled={loading}
-                className={`w-full py-3 sm:py-4 px-4 sm:px-6 rounded-lg sm:rounded-xl font-bold text-base sm:text-lg transition-all duration-300 ${
-                  loading
-                    ? 'bg-gray-600 cursor-not-allowed'
-                    : 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95'
-                }`}
-              >
-                {loading ? (
-                  <div className="flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-4 w-4 sm:h-5 sm:w-5 border-b-2 border-white mr-2"></div>
-                    <span className="text-sm sm:text-base">Authenticating...</span>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-center">
-                    <span className="mr-2">🔐</span>
-                    <span className="text-sm sm:text-base">Admin Login</span>
-                  </div>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Direct admin access - no login required
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
@@ -383,6 +441,180 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
+                {/* Text Styling Options */}
+                <div className="bg-white/5 backdrop-blur-lg rounded-2xl p-6 border border-white/10 hover:border-white/20 transition-all duration-300 group">
+                  <label className="flex items-center text-white font-bold mb-6 text-lg">
+                    <div className="bg-gradient-to-r from-purple-400 to-pink-400 p-3 rounded-xl mr-4 shadow-lg group-hover:scale-110 transition-transform duration-300">
+                      <span className="text-xl">✨</span>
+                    </div>
+                    <div>
+                      <span>Text Styling</span>
+                      <span className="text-white/60 text-sm font-normal block">Customize event name appearance</span>
+                    </div>
+                  </label>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Font Size */}
+                    <div>
+                      <label className="block text-white/80 text-sm font-medium mb-2">Font Size (Auto-fits to strip width)</label>
+                      <input
+                        type="range"
+                        min="40"
+                        max="120"
+                        value={settings.textStyle.fontSize}
+                        onChange={(e) => handleTextStyleChange('fontSize', parseInt(e.target.value))}
+                        className="w-full h-2 bg-white/20 rounded-lg appearance-none cursor-pointer slider"
+                      />
+                      <div className="text-white/60 text-xs mt-1">{settings.textStyle.fontSize}px (Smart sizing ensures text fits perfectly)</div>
+                    </div>
+
+                    {/* Font Family */}
+                    <div>
+                      <label className="block text-white/80 text-sm font-medium mb-2">Font Style</label>
+                      <select
+                        value={settings.textStyle.fontFamily}
+                        onChange={(e) => handleTextStyleChange('fontFamily', e.target.value)}
+                        className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-400"
+                      >
+                        <option value="Arial">Arial (Modern & Clean)</option>
+                        <option value="Georgia">Georgia (Elegant Serif)</option>
+                        <option value="Times New Roman">Times New Roman (Classic)</option>
+                        <option value="Helvetica">Helvetica (Professional)</option>
+                        <option value="Verdana">Verdana (Bold & Clear)</option>
+                        <option value="Trebuchet MS">Trebuchet MS (Stylish)</option>
+                        <option value="Palatino">Palatino (Sophisticated)</option>
+                        <option value="Garamond">Garamond (Traditional)</option>
+                        <option value="Book Antiqua">Book Antiqua (Vintage)</option>
+                        <option value="Lucida Grande">Lucida Grande (Friendly)</option>
+                        <option value="Tahoma">Tahoma (Compact)</option>
+                        <option value="Courier New">Courier New (Typewriter)</option>
+                        <option value="Impact">Impact (Bold Statement)</option>
+                        <option value="Comic Sans MS">Comic Sans MS (Playful)</option>
+                        <option value="Brush Script MT">Brush Script MT (Handwritten)</option>
+                        <option value="Lucida Handwriting">Lucida Handwriting (Script)</option>
+                      </select>
+                    </div>
+
+                    {/* Font Weight */}
+                    <div>
+                      <label className="block text-white/80 text-sm font-medium mb-2">Font Weight</label>
+                      <select
+                        value={settings.textStyle.fontWeight}
+                        onChange={(e) => handleTextStyleChange('fontWeight', e.target.value)}
+                        className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-400"
+                      >
+                        <option value="normal">Normal</option>
+                        <option value="bold">Bold</option>
+                        <option value="bolder">Extra Bold</option>
+                      </select>
+                    </div>
+
+                    {/* Text Color */}
+                    <div>
+                      <label className="block text-white/80 text-sm font-medium mb-2">Text Color</label>
+                      <input
+                        type="color"
+                        value={settings.textStyle.textColor}
+                        onChange={(e) => handleTextStyleChange('textColor', e.target.value)}
+                        className="w-full h-10 bg-white/10 border border-white/20 rounded-lg cursor-pointer"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Toggle Options */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+                    <label className="flex items-center space-x-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={settings.textStyle.textShadow}
+                        onChange={(e) => handleTextStyleChange('textShadow', e.target.checked)}
+                        className="w-5 h-5 text-purple-600 bg-white/10 border-white/20 rounded focus:ring-purple-500"
+                      />
+                      <span className="text-white/80">Text Shadow</span>
+                    </label>
+
+                    <label className="flex items-center space-x-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={settings.textStyle.textGradient}
+                        onChange={(e) => handleTextStyleChange('textGradient', e.target.checked)}
+                        className="w-5 h-5 text-purple-600 bg-white/10 border-white/20 rounded focus:ring-purple-500"
+                      />
+                      <span className="text-white/80">Gradient Effect</span>
+                    </label>
+                  </div>
+
+                  {/* Enhanced Preview */}
+                  {settings.eventName && (
+                    <div className="mt-6 p-6 bg-white/5 rounded-xl border border-white/10">
+                      <p className="text-white/80 text-sm font-medium mb-4">Live Preview:</p>
+                      <div className="bg-gradient-to-r from-purple-900/50 to-pink-900/50 p-6 rounded-lg">
+                        <div
+                          className="text-center"
+                          style={{
+                            fontSize: `${Math.min(settings.textStyle.fontSize * 0.4, 28)}px`,
+                            fontFamily: settings.textStyle.fontFamily,
+                            fontWeight: settings.textStyle.fontWeight,
+                            color: settings.textStyle.textGradient ? 'transparent' : settings.textStyle.textColor,
+                            background: settings.textStyle.textGradient
+                              ? `linear-gradient(45deg, ${settings.textStyle.textColor}, #EC4899, #F59E0B)`
+                              : 'none',
+                            WebkitBackgroundClip: settings.textStyle.textGradient ? 'text' : 'initial',
+                            backgroundClip: settings.textStyle.textGradient ? 'text' : 'initial',
+                            textShadow: settings.textStyle.textShadow ? '3px 3px 6px rgba(0,0,0,0.6)' : 'none',
+                            marginBottom: '8px'
+                          }}
+                        >
+                          {settings.eventName}
+                        </div>
+
+
+                        <div className="mt-6 pt-4 border-t border-white/20">
+                          <div
+                            className="text-center"
+                            style={{
+                              fontSize: '18px', // Fixed bigger size for preview
+                              fontFamily: 'Arial, sans-serif',
+                              fontStyle: 'normal',
+                              color: settings.textStyle.textColor,
+                              fontWeight: 'normal',
+                              textShadow: settings.textStyle.textShadow ? '2px 2px 4px rgba(0,0,0,0.5)' : 'none'
+                            }}
+                          >
+                            {new Date().toLocaleDateString('en-GB', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              year: 'numeric'
+                            })}
+                          </div>
+                          <div className="text-xs text-white/50 mt-1 text-center">
+                            (Date appears at bottom of strip)
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mt-3 text-xs text-white/60 text-center">
+                        Font: {settings.textStyle.fontFamily} • Size: {settings.textStyle.fontSize}px •
+                        {settings.textStyle.textGradient ? ' Gradient' : ' Solid'} •
+                        {settings.textStyle.textShadow ? ' Shadow' : ' No Shadow'}
+                      </div>
+
+                      <div className="mt-4 text-center">
+                        <button
+                          onClick={saveSettings}
+                          className="px-6 py-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-lg font-medium transition-all duration-300 transform hover:scale-105"
+                        >
+                          💾 Apply Text Styling
+                        </button>
+
+                        <div className="mt-3 text-xs text-white/60 text-center">
+                          💡 Tip: Text styling applies to new photo strips. Capture page updates automatically.
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 {/* Enhanced Template Upload */}
                 <div className="bg-white/5 backdrop-blur-lg rounded-2xl p-6 border border-white/10 hover:border-white/20 transition-all duration-300 group">
                   <label className="flex items-center text-white font-bold mb-4 text-lg">
@@ -419,6 +651,22 @@ export default function AdminDashboard() {
                         🗑️ Delete Template
                       </button>
                     )}
+
+                    <button
+                      onClick={loadSettings}
+                      disabled={loading}
+                      className="px-4 py-3 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-400/30 rounded-xl text-white hover:from-blue-500/30 hover:to-cyan-500/30 transition-all duration-300 text-sm font-medium shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 flex items-center space-x-2"
+                      title="Refresh template and settings"
+                    >
+                      {loading ? (
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      ) : (
+                        <>
+                          <span>🔄</span>
+                          <span className="hidden sm:inline">Refresh</span>
+                        </>
+                      )}
+                    </button>
 
                     <div className="bg-white/10 backdrop-blur-lg rounded-xl px-4 py-2 border border-white/20">
                       <span className="text-white/80 text-sm font-medium">
@@ -613,42 +861,63 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* Actions */}
-                <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
+                <div className="grid grid-cols-2 gap-2 sm:gap-3">
                   <button
                     onClick={()=>mark(s._id)}
                     disabled={s.printed}
-                    className={`px-2 sm:px-3 py-1.5 sm:py-2 rounded text-xs sm:text-sm font-semibold transition-all duration-300 ${
+                    className={`px-3 sm:px-4 py-2 sm:py-3 rounded-lg text-xs sm:text-sm font-semibold transition-all duration-300 flex items-center justify-center min-h-[40px] ${
                       s.printed
                         ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
                         : 'bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white transform hover:scale-105 active:scale-95'
                     }`}
+                    title={s.printed ? 'Already printed' : 'Mark as printed'}
                   >
-                    <span className="hidden sm:inline">{s.printed ? '✅ Printed' : '🖨️ Mark Printed'}</span>
-                    <span className="sm:hidden">{s.printed ? '✅' : '🖨️'}</span>
+                    <span className="flex items-center space-x-1">
+                      <span>{s.printed ? '✅' : '🖨️'}</span>
+                      <span className="hidden sm:inline">{s.printed ? 'Printed' : 'Mark'}</span>
+                    </span>
                   </button>
 
                   <button
-                    onClick={()=>window.open(s.imageUrl)}
-                    className="px-2 sm:px-3 py-1.5 sm:py-2 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white rounded text-xs sm:text-sm font-semibold transition-all duration-300 transform hover:scale-105 active:scale-95"
+                    onClick={() => downloadAsPDF(s)}
+                    disabled={loading}
+                    className={`px-3 sm:px-4 py-2 sm:py-3 rounded-lg text-xs sm:text-sm font-semibold transition-all duration-300 flex items-center justify-center min-h-[40px] ${
+                      loading
+                        ? 'bg-gray-500 cursor-not-allowed'
+                        : 'bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 hover:scale-105 active:scale-95'
+                    } text-white`}
+                    title="Download photo strip as image file"
                   >
-                    <span className="hidden sm:inline">📥 Download</span>
-                    <span className="sm:hidden">📥</span>
-                  </button>
-
-                  <button
-                    onClick={()=>del(s._id)}
-                    className="px-2 sm:px-3 py-1.5 sm:py-2 bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white rounded text-xs sm:text-sm font-semibold transition-all duration-300 transform hover:scale-105 active:scale-95"
-                  >
-                    <span className="hidden sm:inline">🗑️ Delete</span>
-                    <span className="sm:hidden">🗑️</span>
+                    {loading ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    ) : (
+                      <span className="flex items-center space-x-1">
+                        <span>📥</span>
+                        <span className="hidden sm:inline">Download</span>
+                      </span>
+                    )}
                   </button>
 
                   <button
                     onClick={() => setPrintingStrip(s)}
-                    className="px-2 sm:px-3 py-1.5 sm:py-2 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white rounded text-xs sm:text-sm font-semibold transition-all duration-300 transform hover:scale-105 active:scale-95"
+                    className="px-3 sm:px-4 py-2 sm:py-3 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white rounded-lg text-xs sm:text-sm font-semibold transition-all duration-300 transform hover:scale-105 active:scale-95 flex items-center justify-center min-h-[40px]"
+                    title="Print photo strip"
                   >
-                    <span className="hidden sm:inline">🖨️ Print</span>
-                    <span className="sm:hidden">🖨️</span>
+                    <span className="flex items-center space-x-1">
+                      <span>🖨️</span>
+                      <span className="hidden sm:inline">Print</span>
+                    </span>
+                  </button>
+
+                  <button
+                    onClick={()=>del(s._id)}
+                    className="px-3 sm:px-4 py-2 sm:py-3 bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white rounded-lg text-xs sm:text-sm font-semibold transition-all duration-300 transform hover:scale-105 active:scale-95 flex items-center justify-center min-h-[40px]"
+                    title="Delete photo strip permanently"
+                  >
+                    <span className="flex items-center space-x-1">
+                      <span>🗑️</span>
+                      <span className="hidden sm:inline">Delete</span>
+                    </span>
                   </button>
                 </div>
               </div>

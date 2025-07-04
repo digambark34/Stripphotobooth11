@@ -2,7 +2,6 @@ import CapturePage from "./components/CapturePage";
 import AdminDashboard from "./components/AdminDashboard";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import "./responsive.css";
 import "./print.css";
 
 function App(){

@@ -10,10 +10,19 @@ exports.getSettings = async (req, res) => {
     if (!settings) {
       settings = new Settings({
         eventName: '',
-        templateUrl: null
+        templateUrl: null,
+        textStyle: {
+          fontSize: 60,
+          fontFamily: 'Arial',
+          fontWeight: 'bold',
+          textColor: '#8B5CF6',
+          textShadow: true,
+          textGradient: true,
+          decorativeLine: false
+        }
       });
       await settings.save();
-      console.log('✅ Created default settings');
+      console.log('✅ Created default settings with text styling');
     }
 
     res.json(settings);
@@ -29,7 +38,7 @@ exports.getSettings = async (req, res) => {
 // Update settings
 exports.updateSettings = async (req, res) => {
   try {
-    const { eventName, template } = req.body;
+    const { eventName, template, textStyle } = req.body;
 
     let settings = await Settings.findById('photobooth-settings');
     if (!settings) {
@@ -39,6 +48,16 @@ exports.updateSettings = async (req, res) => {
     // Update event name
     if (eventName !== undefined) {
       settings.eventName = eventName;
+    }
+
+    // Update text styling
+    if (textStyle !== undefined) {
+      console.log('🎨 Updating text style:', textStyle);
+      settings.textStyle = {
+        ...settings.textStyle,
+        ...textStyle
+      };
+      console.log('✅ Text style updated to:', settings.textStyle);
     }
 
     // Handle template upload to Cloudinary
