@@ -30,16 +30,35 @@ mongoose.connect(process.env.MONGO_URI, {
 // ✅ Initialize Express App
 const app = express();
 
-// ✅ Security Middleware
+// ✅ Security Middleware with flexible CORS for Netlify deployments
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production'
-    ? [
-        'https://686802b63da89a0008189cef--strippphotobooth.netlify.app',
-        'https://6867f0f968a7bb0008fa1dad--strippphotobooth.netlify.app',
+  origin: function (origin, callback) {
+    // Allow requests with no origin (mobile apps, etc.)
+    if (!origin) return callback(null, true);
+
+    if (process.env.NODE_ENV === 'production') {
+      // Allow any Netlify subdomain for strippphotobooth
+      if (origin.includes('strippphotobooth.netlify.app')) {
+        return callback(null, true);
+      }
+      // Allow specific domains
+      const allowedOrigins = [
         'https://strippphotobooth.netlify.app',
         process.env.FRONTEND_URL
-      ].filter(Boolean)
-    : ['http://localhost:3000', 'http://localhost:3001'],
+      ].filter(Boolean);
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error('Not allowed by CORS'));
+    } else {
+      // Development mode - allow localhost
+      if (origin.includes('localhost')) {
+        return callback(null, true);
+      }
+      return callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true
 }));
 

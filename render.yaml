@@ -19,6 +19,6 @@ services:
       - key: CLOUDINARY_API_SECRET
         value: ifOyel7-dC_ZmK9S-rRPKsH7ZnU
       - key: FRONTEND_URL
-        value: https://686802b63da89a0008189cef--strippphotobooth.netlify.app
+        value: https://68680d4b0e65254ad58b8b9e--strippphotobooth.netlify.app
       - key: JWT_SECRET
         value: your_secure_jwt_secret_change_this_in_production
