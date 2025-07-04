@@ -34,6 +34,7 @@ const app = express();
 app.use(cors({
   origin: process.env.NODE_ENV === 'production'
     ? [
+        'https://686802b63da89a0008189cef--strippphotobooth.netlify.app',
         'https://6867f0f968a7bb0008fa1dad--strippphotobooth.netlify.app',
         'https://strippphotobooth.netlify.app',
         process.env.FRONTEND_URL
