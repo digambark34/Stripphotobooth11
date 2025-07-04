@@ -33,7 +33,11 @@ const app = express();
 // ✅ Security Middleware
 app.use(cors({
   origin: process.env.NODE_ENV === 'production'
-    ? ['https://your-domain.com']
+    ? [
+        'https://6867f0f968a7bb0008fa1dad--strippphotobooth.netlify.app',
+        'https://strippphotobooth.netlify.app',
+        process.env.FRONTEND_URL
+      ].filter(Boolean)
     : ['http://localhost:3000', 'http://localhost:3001'],
   credentials: true
 }));

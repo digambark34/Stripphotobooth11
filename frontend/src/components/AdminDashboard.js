@@ -26,7 +26,7 @@ export default function AdminDashboard() {
   const [showSettings, setShowSettings] = useState(false);
 
   // Fallback API URL if environment variable is not set
-  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
+  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://6867e33b27f59b00089ab4b3--strippphotobooth.netlify.app/';
 
   // Login bypassed - direct admin access
 

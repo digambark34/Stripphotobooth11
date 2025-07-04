@@ -46,19 +46,17 @@ export default function CapturePage() {
         };
         templateImg.onerror = () => {
           console.error('❌ Failed to load template image');
-          // Fallback to white background
-          ctx.fillStyle = '#ffffff';
-          ctx.fillRect(0, 0, width, height);
+          // Fallback to transparent background (no white layer)
+          ctx.clearRect(0, 0, width, height);
           // Add beautiful text even on fallback
           addBeautifulText(ctx);
         };
         templateImg.src = settings.template;
       } else {
-        console.log('⚠️ No template found, using white background');
-        // Fallback: white background if no template
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, width, height);
-        // Add beautiful text on white background
+        console.log('⚠️ No template found, using transparent background');
+        // Fallback: transparent background if no template (no white layer)
+        ctx.clearRect(0, 0, width, height);
+        // Add beautiful text on transparent background
         addBeautifulText(ctx);
       }
     }
@@ -202,18 +200,9 @@ export default function CapturePage() {
       // Main title with custom styling
       ctx.save();
 
-      // Apply gradient or solid color based on user preference
-      if (textStyle.textGradient) {
-        const textGradient = ctx.createLinearGradient(0, textAreaY, canvasWidth, textAreaY + 50);
-        textGradient.addColorStop(0, textStyle.textColor);
-        textGradient.addColorStop(0.5, '#EC4899'); // Pink middle
-        textGradient.addColorStop(1, '#F59E0B'); // Gold end
-        ctx.fillStyle = textGradient;
-        console.log('✨ Applied gradient text effect');
-      } else {
-        ctx.fillStyle = textStyle.textColor;
-        console.log('🎨 Applied solid color:', textStyle.textColor);
-      }
+      // Apply solid color for better visibility (no white background)
+      ctx.fillStyle = textStyle.textColor;
+      console.log('🎨 Applied solid color:', textStyle.textColor);
 
       // Smart font sizing - automatically adjust to fit within strip width
       const fontFamily = textStyle.fontFamily || 'Arial';
@@ -244,13 +233,19 @@ export default function CapturePage() {
 
       console.log(`📝 Smart sizing: ${finalFontSize}px (fits in ${maxWidth}px, actual width: ${textWidth.toFixed(0)}px)`);
 
+      // Add text stroke (outline) for better visibility against any background
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.8)'; // Dark outline
+      ctx.lineWidth = Math.max(2, finalFontSize * 0.03); // Proportional outline width
+      ctx.lineJoin = 'round';
+      ctx.miterLimit = 2;
+
       // Text shadow based on user preference
       if (textStyle.textShadow) {
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
-        ctx.shadowBlur = Math.max(6, finalFontSize * 0.1);
-        ctx.shadowOffsetX = Math.max(3, finalFontSize * 0.05);
-        ctx.shadowOffsetY = Math.max(3, finalFontSize * 0.05);
-        console.log('🌟 Applied proportional text shadow');
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
+        ctx.shadowBlur = Math.max(8, finalFontSize * 0.12);
+        ctx.shadowOffsetX = Math.max(4, finalFontSize * 0.06);
+        ctx.shadowOffsetY = Math.max(4, finalFontSize * 0.06);
+        console.log('🌟 Applied strong text shadow for visibility');
       } else {
         ctx.shadowColor = 'transparent';
         ctx.shadowBlur = 0;
@@ -258,9 +253,10 @@ export default function CapturePage() {
         ctx.shadowOffsetY = 0;
       }
 
-      // Draw the text centered
+      // Draw text with outline first, then fill
+      ctx.strokeText(settings.eventName, canvasWidth / 2, textAreaY + 60);
       ctx.fillText(settings.eventName, canvasWidth / 2, textAreaY + 60);
-      console.log(`✅ Drew main title: "${settings.eventName}" at ${finalFontSize}px`);
+      console.log(`✅ Drew main title with outline: "${settings.eventName}" at ${finalFontSize}px`);
       ctx.restore();
 
       // No decorative line - cleaner design
@@ -469,9 +465,8 @@ export default function CapturePage() {
       };
       templateImg.src = settings.template;
     } else {
-      // If no template, draw photo and add text on white background
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, 600, 1800);
+      // If no template, draw photo and add text on transparent background
+      ctx.clearRect(0, 0, 600, 1800);
       ctx.drawImage(tempCanvas, photoX, photoY);
       addBeautifulText(ctx);
     }
