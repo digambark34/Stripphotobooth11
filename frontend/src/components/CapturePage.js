@@ -554,17 +554,7 @@ export default function CapturePage() {
         </div>
       )}
 
-      {/* Top Right Controls */}
-      <div className="fixed top-6 right-6 z-40">
-        {/* Admin Button */}
-        <button
-          onClick={() => window.location.href = '/admin'}
-          className="px-4 py-2 bg-purple-500/80 hover:bg-purple-600/90 backdrop-blur-lg rounded-xl text-white font-medium transition-all duration-300 transform hover:scale-105 border border-purple-400/50 shadow-lg"
-          title="Go to Admin Dashboard"
-        >
-          ⚙️ Admin
-        </button>
-      </div>
+
 
       <div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 md:py-12">
         {/* Header */}
