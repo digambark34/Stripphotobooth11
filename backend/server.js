@@ -42,27 +42,33 @@ app.use(cors({
     }
 
     if (process.env.NODE_ENV === 'production') {
-      // Production CORS rules
-      const allowedPatterns = [
-        /https:\/\/.*strippphotobooth\.netlify\.app$/,  // Any Netlify subdomain
-        /https:\/\/strippphotobooth\.netlify\.app$/,    // Main domain
-      ];
+      // Production CORS rules - Simple string matching for reliability
+      const allowedOrigins = [
+        'https://stripphotobooth.netlify.app',
+        'https://strippphotobooth.netlify.app',
+        process.env.FRONTEND_URL
+      ].filter(Boolean);
 
-      // Check if origin matches any allowed pattern
-      const isAllowed = allowedPatterns.some(pattern => pattern.test(origin));
-
-      if (isAllowed) {
-        console.log('✅ CORS: Allowing production origin:', origin);
+      // Check exact matches first
+      if (allowedOrigins.includes(origin)) {
+        console.log('✅ CORS: Allowing exact match origin:', origin);
         return callback(null, true);
       }
 
-      // Also check environment variable
-      if (process.env.FRONTEND_URL && origin === process.env.FRONTEND_URL) {
-        console.log('✅ CORS: Allowing environment URL:', origin);
+      // Check if it's any Netlify subdomain for strippphotobooth
+      if (origin.includes('strippphotobooth.netlify.app') || origin.includes('stripphotobooth.netlify.app')) {
+        console.log('✅ CORS: Allowing Netlify subdomain:', origin);
+        return callback(null, true);
+      }
+
+      // TEMPORARY: Allow all Netlify domains as emergency fallback
+      if (origin.includes('.netlify.app')) {
+        console.log('🚨 EMERGENCY: Allowing Netlify domain:', origin);
         return callback(null, true);
       }
 
       console.log('❌ CORS: Rejecting origin:', origin);
+      console.log('📋 Allowed origins:', allowedOrigins);
       return callback(new Error('Not allowed by CORS'));
     } else {
       // Development mode - allow localhost and any local development
@@ -85,8 +91,13 @@ app.use((req, res, next) => {
   const origin = req.headers.origin;
   console.log('📡 Request from origin:', origin);
 
-  // Set CORS headers manually as backup
-  if (origin && origin.includes('strippphotobooth.netlify.app')) {
+  // Set CORS headers manually as backup for all Netlify domains
+  if (origin && (
+    origin.includes('strippphotobooth.netlify.app') ||
+    origin.includes('stripphotobooth.netlify.app') ||
+    origin === 'https://stripphotobooth.netlify.app' ||
+    origin === 'https://strippphotobooth.netlify.app'
+  )) {
     res.header('Access-Control-Allow-Origin', origin);
     res.header('Access-Control-Allow-Credentials', 'true');
     res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS');
@@ -98,9 +109,10 @@ app.use((req, res, next) => {
   if (req.method === 'OPTIONS') {
     console.log('🔄 Handling OPTIONS preflight request');
     res.sendStatus(200);
-  } else {
-    next();
+    return;
   }
+
+  next();
 });
 
 // ✅ Body parsing with size limits
