@@ -6,7 +6,6 @@ export default function CapturePage() {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const [steps, setSteps] = useState(0);
-  const [countdown, setCountdown] = useState(null);
   const [currentCamera, setCurrentCamera] = useState('environment'); // 'user' for front, 'environment' for back
   const [settings, setSettings] = useState({
     eventName: '',
@@ -90,14 +89,7 @@ export default function CapturePage() {
       console.log('🎨 Text style from backend:', backendSettings.textStyle);
       setSettings(backendSettings);
 
-      // Show notification when template is loaded
-      if (backendSettings.template) {
-        setNotification({
-          type: 'success',
-          message: '🖼️ Template loaded successfully!'
-        });
-        setTimeout(() => setNotification(null), 2000);
-      }
+      // Template loaded silently - no notification shown
     } catch (error) {
       console.error('❌ Error loading settings from backend:', error);
 
@@ -431,26 +423,64 @@ export default function CapturePage() {
     };
   }, [refreshPage]);
 
+  // Check if video is ready for capture
+  const isVideoReady = useCallback(() => {
+    if (!videoRef.current) return false;
+
+    const video = videoRef.current;
+    const isReady = video.readyState >= 2 && // HAVE_CURRENT_DATA or higher
+                   video.videoWidth > 0 &&
+                   video.videoHeight > 0 &&
+                   !video.paused &&
+                   !video.ended;
+
+    console.log('📹 Video ready check:', {
+      readyState: video.readyState,
+      videoWidth: video.videoWidth,
+      videoHeight: video.videoHeight,
+      paused: video.paused,
+      ended: video.ended,
+      isReady
+    });
+
+    return isReady;
+  }, []);
+
   const startCapture = () => {
     if (steps >= 3) return;
 
-    // Start countdown from 3
-    setCountdown(3);
+    // Check if video is ready before starting capture
+    if (!isVideoReady()) {
+      setNotification({
+        type: "error",
+        message: "Camera is not ready yet. Please wait a moment and try again."
+      });
+      return;
+    }
 
-    // Countdown sequence: 3 -> 2 -> 1 -> CAPTURE
-    setTimeout(() => setCountdown(2), 1000);
-    setTimeout(() => setCountdown(1), 2000);
-    setTimeout(() => {
-      setCountdown("📸"); // Show camera icon briefly
-      setTimeout(() => {
-        takePhoto();
-        setCountdown(null);
-      }, 500); // Show camera icon for 0.5 seconds before capture
-    }, 3000);
+    // Instant photo capture - no countdown timer
+    console.log('📸 Taking photo instantly...');
+    takePhoto();
   };
 
   const takePhoto = () => {
+    console.log('📸 Starting photo capture process...');
+
+    // Validate video and canvas are ready
+    if (!videoRef.current || !canvasRef.current) {
+      console.error('❌ Video or canvas not ready');
+      setNotification({
+        type: "error",
+        message: "Camera not ready. Please wait and try again."
+      });
+      return;
+    }
+
     const ctx = canvasRef.current.getContext("2d");
+    if (!ctx) {
+      console.error('❌ Canvas context not available');
+      return;
+    }
 
     // BIGGER Photo frames with borders - elegant and spacious
     const photoWidth = 500;   // Bigger width for better presence
@@ -475,9 +505,19 @@ export default function CapturePage() {
     tempCanvas.height = photoHeight; // Use actual photo height (~588px)
     const tempCtx = tempCanvas.getContext('2d');
 
-    // Get video dimensions
+    // Get video dimensions with validation
     const videoWidth = videoRef.current.videoWidth || videoRef.current.clientWidth;
     const videoHeight = videoRef.current.videoHeight || videoRef.current.clientHeight;
+
+    // Validate video dimensions
+    if (!videoWidth || !videoHeight || videoWidth < 100 || videoHeight < 100) {
+      console.error('❌ Invalid video dimensions:', { videoWidth, videoHeight });
+      setNotification({
+        type: "error",
+        message: "Camera not ready. Please wait for camera to load and try again."
+      });
+      return;
+    }
 
     // Debug: Log dimensions to verify SMART FILL capture
     console.log('📸 SMART FILL capture at 300 DPI:', {
@@ -495,50 +535,75 @@ export default function CapturePage() {
     // Strategy: SMART FILL - Capture ALL people while completely filling the box
     // This ensures EVERYONE is visible AND the entire box is filled with photo content
 
-    if (videoWidth && videoHeight) {
-      // SMART STRETCH FILL: Stretch video to fill entire box while keeping all people visible
-      // This approach fills the box completely with photo content (no backgrounds)
+    try {
+      if (videoWidth && videoHeight) {
+        // SMART STRETCH FILL: Stretch video to fill entire box while keeping all people visible
+        // This approach fills the box completely with photo content (no backgrounds)
 
-      // Calculate aspect ratios
-      const videoAspect = videoWidth / videoHeight;
-      const boxAspect = photoWidth / photoHeight;
+        // Calculate aspect ratios
+        const videoAspect = videoWidth / videoHeight;
+        const boxAspect = photoWidth / photoHeight;
 
-      let sourceX = 0, sourceY = 0, sourceWidth = videoWidth, sourceHeight = videoHeight;
+        let sourceX = 0, sourceY = 0, sourceWidth = videoWidth, sourceHeight = videoHeight;
 
-      if (videoAspect > boxAspect) {
-        // Video is wider than box - adjust width to fit all people
-        // Keep full height, crop minimal width from sides
-        const newWidth = videoHeight * boxAspect;
-        sourceX = (videoWidth - newWidth) / 2; // Center crop
-        sourceWidth = newWidth;
+        if (videoAspect > boxAspect) {
+          // Video is wider than box - adjust width to fit all people
+          // Keep full height, crop minimal width from sides
+          const newWidth = videoHeight * boxAspect;
+          sourceX = (videoWidth - newWidth) / 2; // Center crop
+          sourceWidth = newWidth;
+        } else {
+          // Video is taller than box - adjust height to fit all people
+          // Keep full width, crop minimal height from top/bottom
+          const newHeight = videoWidth / boxAspect;
+          sourceY = (videoHeight - newHeight) / 2; // Center crop
+          sourceHeight = newHeight;
+        }
+
+        // Draw the intelligently cropped video to fill entire box
+        tempCtx.drawImage(
+          videoRef.current,
+          sourceX, sourceY, sourceWidth, sourceHeight, // Source: Smart crop to preserve people
+          0, 0, photoWidth, photoHeight // Destination: Fill entire box completely
+        );
+
+        console.log(`📸 SMART STRETCH mode: Box filled completely with photo content - sourceArea: ${sourceWidth.toFixed(0)}×${sourceHeight.toFixed(0)} → ${photoWidth}×${photoHeight} box`);
       } else {
-        // Video is taller than box - adjust height to fit all people
-        // Keep full width, crop minimal height from top/bottom
-        const newHeight = videoWidth / boxAspect;
-        sourceY = (videoHeight - newHeight) / 2; // Center crop
-        sourceHeight = newHeight;
+        // Fallback: Direct capture if dimensions not available
+        tempCtx.drawImage(
+          videoRef.current,
+          0, 0, photoWidth, photoHeight
+        );
+        console.log('📸 Fallback mode: Direct video capture');
       }
-
-      // Draw the intelligently cropped video to fill entire box
-      tempCtx.drawImage(
-        videoRef.current,
-        sourceX, sourceY, sourceWidth, sourceHeight, // Source: Smart crop to preserve people
-        0, 0, photoWidth, photoHeight // Destination: Fill entire box completely
-      );
-
-      console.log(`📸 SMART STRETCH mode: Box filled completely with photo content - sourceArea: ${sourceWidth.toFixed(0)}×${sourceHeight.toFixed(0)} → ${photoWidth}×${photoHeight} box`);
-    } else {
-      // Fallback: Direct capture if dimensions not available
-      tempCtx.drawImage(
-        videoRef.current,
-        0, 0, photoWidth, photoHeight
-      );
+    } catch (error) {
+      console.error('❌ Error capturing photo from video:', error);
+      setNotification({
+        type: "error",
+        message: "Failed to capture photo. Please try again."
+      });
+      return;
     }
 
     // Store the captured photo data for redrawing with template
-    const capturedPhotoData = tempCanvas.toDataURL();
+    let capturedPhotoData;
+    try {
+      capturedPhotoData = tempCanvas.toDataURL('image/jpeg', 0.9);
+      if (!capturedPhotoData || capturedPhotoData.length < 1000) {
+        throw new Error('Photo data too small or empty');
+      }
+    } catch (error) {
+      console.error('❌ Error converting photo to data URL:', error);
+      setNotification({
+        type: "error",
+        message: "Failed to process photo. Please try again."
+      });
+      return;
+    }
+
     const newCapturedPhotos = [...capturedPhotos, { data: capturedPhotoData, x: photoX, y: photoY }];
     setCapturedPhotos(newCapturedPhotos);
+    console.log(`✅ Photo ${steps + 1} captured successfully, data size: ${(capturedPhotoData.length / 1024).toFixed(1)}KB`);
 
     // Redraw everything: template background + all photos + beautiful text
     if (settings.template) {
@@ -570,6 +635,23 @@ export default function CapturePage() {
           addBeautifulText(ctx);
         }
       };
+
+      templateImg.onerror = () => {
+        console.error('❌ Failed to load template for photo placement');
+        setNotification({
+          type: "error",
+          message: "Template failed to load. Using fallback."
+        });
+        // Fallback to no template
+        try {
+          ctx.clearRect(0, 0, 600, 1800);
+          ctx.drawImage(tempCanvas, photoX, photoY);
+          addBeautifulText(ctx);
+        } catch (error) {
+          console.error('❌ Error in template fallback:', error);
+        }
+      };
+
       templateImg.src = settings.template;
     } else {
       // If no template, draw photo and add text on transparent background
@@ -593,7 +675,19 @@ export default function CapturePage() {
       setIsSubmitting(true);
       setNotification(null);
 
+      // Validate canvas has content before submitting
+      if (!canvasRef.current) {
+        throw new Error('Canvas not available');
+      }
+
       const dataUrl = canvasRef.current.toDataURL("image/jpeg", 0.8);
+
+      // Validate the generated image data
+      if (!dataUrl || dataUrl.length < 10000) {
+        throw new Error('Generated image appears to be blank or too small');
+      }
+
+      console.log(`📤 Submitting photo strip, data size: ${(dataUrl.length / 1024).toFixed(1)}KB`);
 
       await axios.post(`${API_BASE_URL}/api/strips`, {
         image: dataUrl,
@@ -722,21 +816,6 @@ export default function CapturePage() {
 
               {/* Overlay gradient */}
               <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent rounded-2xl pointer-events-none"></div>
-
-              {countdown && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/70 backdrop-blur-sm rounded-2xl">
-                  <div className="text-center">
-                    <div className={`text-4xl sm:text-6xl md:text-7xl font-black text-white drop-shadow-2xl mb-2 ${
-                      countdown === "📸" ? "animate-pulse text-6xl sm:text-8xl md:text-9xl" : "animate-bounce"
-                    }`}>
-                      {countdown}
-                    </div>
-                    <div className="text-white/80 text-sm sm:text-base font-medium">
-                      {countdown === "📸" ? "Capturing..." : countdown === 1 ? "Say Cheese!" : "Get ready!"}
-                    </div>
-                  </div>
-                </div>
-              )}
 
 
             </div>
