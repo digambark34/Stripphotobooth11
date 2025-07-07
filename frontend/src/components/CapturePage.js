@@ -1,5 +1,6 @@
 import { useRef, useState, useEffect, useCallback } from "react";
 import axios from "axios";
+import './MobileCamera.css';
 
 export default function CapturePage() {
   const videoRef = useRef(null);
@@ -14,6 +15,7 @@ export default function CapturePage() {
   const [notification, setNotification] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [capturedPhotos, setCapturedPhotos] = useState([]); // Store captured photo data
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Fallback API URL if environment variable is not set
   const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
@@ -322,9 +324,17 @@ export default function CapturePage() {
         videoRef.current.srcObject = stream;
         console.log(`✅ Camera initialized successfully with ${facingMode} camera`);
 
-        // Log actual video resolution
+        // Log actual video resolution and display size
         videoRef.current.onloadedmetadata = () => {
-          console.log(`📹 Actual video resolution: ${videoRef.current.videoWidth}×${videoRef.current.videoHeight}`);
+          const video = videoRef.current;
+          console.log(`📹 Video Details:`, {
+            resolution: `${video.videoWidth}×${video.videoHeight}`,
+            displaySize: `${video.clientWidth}×${video.clientHeight}`,
+            screenSize: `${window.innerWidth}×${window.innerHeight}`,
+            viewportHeight: `${window.innerHeight}px`,
+            cameraHeightVH: `${(video.clientHeight / window.innerHeight * 100).toFixed(1)}vh`,
+            facingMode: facingMode
+          });
         };
       }
     } catch (error) {
@@ -355,6 +365,71 @@ export default function CapturePage() {
     initializeCamera(newCamera);
     console.log(`🔄 Switching to ${newCamera === 'user' ? 'front' : 'back'} camera`);
   }, [currentCamera, initializeCamera]);
+
+  // Refresh page function
+  const refreshPage = useCallback(() => {
+    setIsRefreshing(true);
+    setTimeout(() => {
+      window.location.reload();
+    }, 500);
+  }, []);
+
+  // Pull-to-refresh functionality for mobile
+  useEffect(() => {
+    let startY = 0;
+    let currentY = 0;
+    let pullDistance = 0;
+    const threshold = 100; // Pull distance needed to trigger refresh
+
+    const handleTouchStart = (e) => {
+      if (window.scrollY === 0) { // Only at top of page
+        startY = e.touches[0].clientY;
+      }
+    };
+
+    const handleTouchMove = (e) => {
+      if (window.scrollY === 0 && startY > 0) {
+        currentY = e.touches[0].clientY;
+        pullDistance = currentY - startY;
+
+        if (pullDistance > 0) {
+          e.preventDefault(); // Prevent default scroll
+
+          // Visual feedback for pull-to-refresh
+          if (pullDistance > threshold) {
+            document.body.style.transform = `translateY(${Math.min(pullDistance * 0.5, 50)}px)`;
+            document.body.style.transition = 'transform 0.1s ease-out';
+          }
+        }
+      }
+    };
+
+    const handleTouchEnd = () => {
+      if (pullDistance > threshold) {
+        refreshPage();
+      }
+
+      // Reset visual feedback
+      document.body.style.transform = '';
+      document.body.style.transition = '';
+      startY = 0;
+      currentY = 0;
+      pullDistance = 0;
+    };
+
+    // Add touch event listeners
+    document.addEventListener('touchstart', handleTouchStart, { passive: false });
+    document.addEventListener('touchmove', handleTouchMove, { passive: false });
+    document.addEventListener('touchend', handleTouchEnd);
+
+    return () => {
+      document.removeEventListener('touchstart', handleTouchStart);
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', handleTouchEnd);
+      document.body.style.transform = '';
+      document.body.style.transition = '';
+    };
+  }, [refreshPage]);
 
   const startCapture = () => {
     if (steps >= 3) return;
@@ -588,28 +663,45 @@ export default function CapturePage() {
 
 
 
-      <div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 md:py-12">
-        {/* Header */}
-        <div className="text-center mb-8 sm:mb-12 md:mb-16">
-          <div className="inline-block p-6 bg-white/10 backdrop-blur-lg rounded-3xl border border-white/20 shadow-2xl mb-6">
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-white mb-3 bg-gradient-to-r from-white via-purple-200 to-pink-200 bg-clip-text text-transparent">
+      <div className="relative z-10 container mx-auto px-2 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 md:py-8 lg:py-12">
+        {/* Header - Compact on Mobile */}
+        <div className="text-center mb-4 sm:mb-8 md:mb-12 lg:mb-16">
+          <div className="inline-block p-4 sm:p-6 bg-white/10 backdrop-blur-lg rounded-2xl sm:rounded-3xl border border-white/20 shadow-2xl mb-4 sm:mb-6 relative mobile-header">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-black text-white mb-2 sm:mb-3 bg-gradient-to-r from-white via-purple-200 to-pink-200 bg-clip-text text-transparent">
               📸 Strip Photobooth
             </h1>
-            <div className="w-24 h-1 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full mx-auto mb-4"></div>
-            <p className="text-base sm:text-lg md:text-xl text-white/90 font-medium">Create amazing photo strips instantly!</p>
+            <div className="w-16 sm:w-24 h-1 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full mx-auto mb-2 sm:mb-4"></div>
+            <p className="text-sm sm:text-base md:text-lg lg:text-xl text-white/90 font-medium">Create amazing photo strips instantly!</p>
+
+            {/* Refresh Button */}
+            <button
+              onClick={refreshPage}
+              disabled={isRefreshing}
+              className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 backdrop-blur-lg rounded-xl text-white transition-all duration-300 transform hover:scale-110 active:scale-95 border border-white/20 hover:border-white/30"
+              title="Refresh Page"
+            >
+              <div className={`text-lg ${isRefreshing ? 'animate-spin' : ''}`}>
+                🔄
+              </div>
+            </button>
+          </div>
+
+          {/* Mobile Pull-to-Refresh Hint */}
+          <div className="block sm:hidden text-white/60 text-sm mb-4">
+            💡 Pull down to refresh on mobile
           </div>
         </div>
 
-        {/* Enhanced Camera Section */}
-        <div className="max-w-md sm:max-w-lg md:max-w-xl mx-auto px-4 sm:px-0">
-          <div className="bg-white/5 backdrop-blur-xl rounded-3xl p-6 sm:p-8 border border-white/10 shadow-2xl relative overflow-hidden">
+        {/* Enhanced Camera Section - Full Screen on Mobile */}
+        <div className="w-full max-w-none sm:max-w-lg md:max-w-xl mx-auto px-1 sm:px-4 md:px-0">
+          <div className="bg-white/5 backdrop-blur-xl rounded-xl sm:rounded-2xl md:rounded-3xl p-2 sm:p-4 md:p-6 lg:p-8 border border-white/10 shadow-2xl relative overflow-hidden mobile-camera-container">
             {/* Decorative elements */}
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400"></div>
 
-            <div className="text-center mb-6">
-              <div className="inline-flex items-center space-x-3 bg-white/10 backdrop-blur-lg rounded-2xl px-6 py-3 border border-white/20">
-                <span className="text-2xl">📹</span>
-                <h3 className="text-xl sm:text-2xl font-bold text-white">Camera</h3>
+            <div className="text-center mb-3 sm:mb-4 md:mb-6">
+              <div className="inline-flex items-center space-x-2 sm:space-x-3 bg-white/10 backdrop-blur-lg rounded-lg sm:rounded-xl md:rounded-2xl px-3 sm:px-4 md:px-6 py-2 sm:py-2 md:py-3 border border-white/20">
+                <span className="text-lg sm:text-xl md:text-2xl">📹</span>
+                <h3 className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-white">Camera</h3>
               </div>
             </div>
 
@@ -618,8 +710,14 @@ export default function CapturePage() {
                 ref={videoRef}
                 autoPlay
                 playsInline
-                className="w-full aspect-video rounded-2xl shadow-2xl border-4 border-white/20 group-hover:border-white/30 transition-all duration-300"
-                style={{ objectFit: 'contain' }}
+                className="w-full aspect-video rounded-lg sm:rounded-xl md:rounded-2xl shadow-2xl border-2 sm:border-3 md:border-4 border-white/20 group-hover:border-white/30 transition-all duration-300 mobile-camera-video"
+                style={{
+                  objectFit: 'cover',
+                  minHeight: '65vh',
+                  maxHeight: '80vh',
+                  width: '100%',
+                  height: 'auto'
+                }}
               />
 
               {/* Overlay gradient */}
@@ -644,11 +742,11 @@ export default function CapturePage() {
             </div>
 
             {/* Enhanced Progress indicator */}
-            <div className="mt-6 flex justify-center space-x-3">
+            <div className="mt-4 sm:mt-6 flex justify-center space-x-4 sm:space-x-3">
                 {[1, 2, 3].map((step) => (
                   <div key={step} className="flex flex-col items-center space-y-2">
                     <div
-                      className={`w-4 h-4 sm:w-5 sm:h-5 rounded-full border-2 transition-all duration-500 ${
+                      className={`w-5 h-5 sm:w-4 sm:h-4 md:w-5 md:h-5 rounded-full border-2 transition-all duration-500 ${
                         steps >= step
                           ? 'bg-gradient-to-r from-green-400 to-emerald-400 border-green-300 shadow-lg shadow-green-400/50'
                           : steps + 1 === step
@@ -656,7 +754,7 @@ export default function CapturePage() {
                           : 'bg-white/10 border-white/30'
                       }`}
                     />
-                    <span className={`text-xs font-medium transition-colors duration-300 ${
+                    <span className={`text-xs sm:text-xs font-medium transition-colors duration-300 ${
                       steps >= step ? 'text-green-300' : steps + 1 === step ? 'text-blue-300' : 'text-white/50'
                     }`}>
                       {step === 1 ? 'Top' : step === 2 ? 'Mid' : 'Bot'}
@@ -665,20 +763,20 @@ export default function CapturePage() {
                 ))}
             </div>
 
-            {/* Enhanced Capture Button */}
-            <div className="mt-8">
+            {/* Enhanced Capture Button - Mobile Optimized */}
+            <div className="mt-6 sm:mt-8 mobile-controls">
               <button
                 onClick={startCapture}
                 disabled={steps >= 3}
-                className={`w-full py-4 sm:py-5 px-6 rounded-2xl font-bold text-lg sm:text-xl transition-all duration-300 transform relative overflow-hidden ${
+                className={`w-full py-5 sm:py-4 md:py-5 px-6 rounded-xl sm:rounded-2xl font-bold text-xl sm:text-lg md:text-xl transition-all duration-300 transform relative overflow-hidden mobile-button ${
                   steps >= 3
                     ? 'bg-gradient-to-r from-gray-500 to-gray-600 cursor-not-allowed text-gray-200'
                     : 'bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 hover:from-pink-600 hover:via-purple-600 hover:to-indigo-600 text-white shadow-2xl hover:shadow-pink-500/25 hover:scale-105 active:scale-95'
                 }`}
               >
                 <div className="relative z-10 flex items-center justify-center space-x-3">
-                  <span className="text-2xl">{steps >= 3 ? '✅' : '📸'}</span>
-                  <span>{steps >= 3 ? 'All Photos Captured!' : 'Capture Photo'}</span>
+                  <span className="text-2xl sm:text-2xl">{steps >= 3 ? '✅' : '📸'}</span>
+                  <span className="text-lg sm:text-base md:text-lg">{steps >= 3 ? 'All Photos Captured!' : 'Capture Photo'}</span>
                 </div>
                 {steps < 3 && (
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
@@ -686,16 +784,16 @@ export default function CapturePage() {
               </button>
             </div>
 
-            {/* Camera Switch Button */}
-            <div className="mt-4">
+            {/* Camera Switch Button - Mobile Optimized */}
+            <div className="mt-3 sm:mt-4">
               <button
                 onClick={switchCamera}
-                className="w-full py-3 px-4 bg-white/10 hover:bg-white/20 backdrop-blur-lg rounded-xl text-white font-medium transition-all duration-300 transform hover:scale-105 active:scale-95 border border-white/20 hover:border-white/30"
+                className="w-full py-4 sm:py-3 px-4 bg-white/10 hover:bg-white/20 backdrop-blur-lg rounded-xl text-white font-medium transition-all duration-300 transform hover:scale-105 active:scale-95 border border-white/20 hover:border-white/30 mobile-camera-switch"
               >
-                <div className="flex items-center justify-center space-x-3">
+                <div className="flex items-center justify-center space-x-2 sm:space-x-3">
                   <span className="text-xl">🔄</span>
-                  <span>Switch to {currentCamera === 'user' ? 'Back' : 'Front'} Camera</span>
-                  <span className="text-sm opacity-75">
+                  <span className="text-base sm:text-sm md:text-base">Switch to {currentCamera === 'user' ? 'Back' : 'Front'} Camera</span>
+                  <span className="text-xs sm:text-sm opacity-75 hidden sm:inline">
                     ({currentCamera === 'user' ? 'Front' : 'Back'} Active)
                   </span>
                 </div>
