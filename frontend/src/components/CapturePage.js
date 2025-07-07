@@ -7,6 +7,7 @@ export default function CapturePage() {
   const canvasRef = useRef(null);
   const [steps, setSteps] = useState(0);
   const [currentCamera, setCurrentCamera] = useState('environment'); // 'user' for front, 'environment' for back
+  const [showNextPhotoMessage, setShowNextPhotoMessage] = useState(false);
   const [settings, setSettings] = useState({
     eventName: '',
     template: null // Template image instead of background color
@@ -663,6 +664,14 @@ export default function CapturePage() {
     const boxNames = ['FIRST BOX (TOP)', 'SECOND BOX (MIDDLE)', 'THIRD BOX (BOTTOM)'];
     console.log(`✅ Photo ${steps + 1} placed in ${boxNames[steps]} at position: X=${photoX}px, Y=${photoY}px`);
 
+    // Show "Next Photo" message after capture (except for the last photo)
+    if (steps < 2) {
+      setShowNextPhotoMessage(true);
+      setTimeout(() => {
+        setShowNextPhotoMessage(false);
+      }, 1500); // Show for 1.5 seconds
+    }
+
     // No logo overlay - clean template with photos only
 
     setSteps(steps + 1);
@@ -816,6 +825,23 @@ export default function CapturePage() {
 
               {/* Overlay gradient */}
               <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent rounded-2xl pointer-events-none"></div>
+
+              {/* Next Photo Message */}
+              {showNextPhotoMessage && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/70 backdrop-blur-sm rounded-2xl">
+                  <div className="text-center">
+                    <div className="text-4xl sm:text-6xl md:text-7xl font-black text-white drop-shadow-2xl mb-2 animate-pulse">
+                      📸
+                    </div>
+                    <div className="text-white text-lg sm:text-xl md:text-2xl font-bold mb-2">
+                      Photo Captured!
+                    </div>
+                    <div className="text-white/80 text-base sm:text-lg font-medium">
+                      Ready for next photo
+                    </div>
+                  </div>
+                </div>
+              )}
 
 
             </div>
