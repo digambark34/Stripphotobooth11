@@ -6,6 +6,7 @@ export default function CapturePage() {
   const canvasRef = useRef(null);
   const [steps, setSteps] = useState(0);
   const [countdown, setCountdown] = useState(null);
+  const [currentCamera, setCurrentCamera] = useState('environment'); // 'user' for front, 'environment' for back
   const [settings, setSettings] = useState({
     eventName: '',
     template: null // Template image instead of background color
@@ -293,27 +294,50 @@ export default function CapturePage() {
     }
   };
 
-  useEffect(() => {
-    navigator.mediaDevices
-      .getUserMedia({
+  // Camera initialization with higher resolution and camera switching support
+  const initializeCamera = useCallback(async (facingMode = currentCamera) => {
+    try {
+      // Stop existing stream
+      if (videoRef.current && videoRef.current.srcObject) {
+        const tracks = videoRef.current.srcObject.getTracks();
+        tracks.forEach(track => track.stop());
+      }
+
+      console.log(`📹 Initializing camera with facing mode: ${facingMode}`);
+
+      // High-resolution constraints optimized for mobile
+      const constraints = {
         video: {
-          width: { ideal: 1920, min: 1280 },
-          height: { ideal: 1080, min: 720 },
-          facingMode: 'user',
-          frameRate: { ideal: 30 },
+          width: { ideal: 2560, min: 1920 }, // Higher resolution for mobile
+          height: { ideal: 1440, min: 1080 },
+          facingMode: { ideal: facingMode }, // Use ideal instead of exact for better compatibility
+          frameRate: { ideal: 30, min: 15 },
           aspectRatio: { ideal: 16/9 }
         }
-      })
-      .then((stream) => {
-        if (videoRef.current) videoRef.current.srcObject = stream;
-      })
-      .catch((error) => {
-        console.warn("Camera access denied:", error);
-        setNotification({
-          type: "error",
-          message: "Camera access required. Please allow webcam access and refresh the page."
-        });
+      };
+
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        console.log(`✅ Camera initialized successfully with ${facingMode} camera`);
+
+        // Log actual video resolution
+        videoRef.current.onloadedmetadata = () => {
+          console.log(`📹 Actual video resolution: ${videoRef.current.videoWidth}×${videoRef.current.videoHeight}`);
+        };
+      }
+    } catch (error) {
+      console.warn("Camera access error:", error);
+      setNotification({
+        type: "error",
+        message: `Camera access required. Please allow camera access and refresh the page. Error: ${error.message}`
       });
+    }
+  }, [currentCamera]);
+
+  useEffect(() => {
+    initializeCamera();
 
     // Cleanup function to stop camera when component unmounts
     return () => {
@@ -322,7 +346,15 @@ export default function CapturePage() {
         tracks.forEach(track => track.stop());
       }
     };
-  }, []);
+  }, [initializeCamera]);
+
+  // Camera switching function
+  const switchCamera = useCallback(() => {
+    const newCamera = currentCamera === 'user' ? 'environment' : 'user';
+    setCurrentCamera(newCamera);
+    initializeCamera(newCamera);
+    console.log(`🔄 Switching to ${newCamera === 'user' ? 'front' : 'back'} camera`);
+  }, [currentCamera, initializeCamera]);
 
   const startCapture = () => {
     if (steps >= 3) return;
@@ -651,6 +683,22 @@ export default function CapturePage() {
                 {steps < 3 && (
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
                 )}
+              </button>
+            </div>
+
+            {/* Camera Switch Button */}
+            <div className="mt-4">
+              <button
+                onClick={switchCamera}
+                className="w-full py-3 px-4 bg-white/10 hover:bg-white/20 backdrop-blur-lg rounded-xl text-white font-medium transition-all duration-300 transform hover:scale-105 active:scale-95 border border-white/20 hover:border-white/30"
+              >
+                <div className="flex items-center justify-center space-x-3">
+                  <span className="text-xl">🔄</span>
+                  <span>Switch to {currentCamera === 'user' ? 'Back' : 'Front'} Camera</span>
+                  <span className="text-sm opacity-75">
+                    ({currentCamera === 'user' ? 'Front' : 'Back'} Active)
+                  </span>
+                </div>
               </button>
             </div>
 
