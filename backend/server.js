@@ -30,37 +30,78 @@ mongoose.connect(process.env.MONGO_URI, {
 // ✅ Initialize Express App
 const app = express();
 
-// ✅ Security Middleware with flexible CORS for Netlify deployments
+// ✅ Security Middleware with comprehensive CORS support
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow requests with no origin (mobile apps, etc.)
-    if (!origin) return callback(null, true);
+    console.log('🔍 CORS check for origin:', origin);
+
+    // Allow requests with no origin (mobile apps, Postman, etc.)
+    if (!origin) {
+      console.log('✅ CORS: Allowing request with no origin');
+      return callback(null, true);
+    }
 
     if (process.env.NODE_ENV === 'production') {
-      // Allow any Netlify subdomain for strippphotobooth
-      if (origin.includes('strippphotobooth.netlify.app')) {
-        return callback(null, true);
-      }
-      // Allow specific domains
-      const allowedOrigins = [
-        'https://strippphotobooth.netlify.app',
-        process.env.FRONTEND_URL
-      ].filter(Boolean);
+      // Production CORS rules
+      const allowedPatterns = [
+        /https:\/\/.*strippphotobooth\.netlify\.app$/,  // Any Netlify subdomain
+        /https:\/\/strippphotobooth\.netlify\.app$/,    // Main domain
+      ];
 
-      if (allowedOrigins.includes(origin)) {
+      // Check if origin matches any allowed pattern
+      const isAllowed = allowedPatterns.some(pattern => pattern.test(origin));
+
+      if (isAllowed) {
+        console.log('✅ CORS: Allowing production origin:', origin);
         return callback(null, true);
       }
+
+      // Also check environment variable
+      if (process.env.FRONTEND_URL && origin === process.env.FRONTEND_URL) {
+        console.log('✅ CORS: Allowing environment URL:', origin);
+        return callback(null, true);
+      }
+
+      console.log('❌ CORS: Rejecting origin:', origin);
       return callback(new Error('Not allowed by CORS'));
     } else {
-      // Development mode - allow localhost
-      if (origin.includes('localhost')) {
+      // Development mode - allow localhost and any local development
+      if (origin.includes('localhost') || origin.includes('127.0.0.1') || origin.includes('192.168.')) {
+        console.log('✅ CORS: Allowing development origin:', origin);
         return callback(null, true);
       }
+      console.log('❌ CORS: Rejecting development origin:', origin);
       return callback(new Error('Not allowed by CORS'));
     }
   },
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  optionsSuccessStatus: 200 // For legacy browser support
 }));
+
+// Additional CORS headers for extra compatibility
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  console.log('📡 Request from origin:', origin);
+
+  // Set CORS headers manually as backup
+  if (origin && origin.includes('strippphotobooth.netlify.app')) {
+    res.header('Access-Control-Allow-Origin', origin);
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Content-Length, X-Requested-With');
+    console.log('✅ Manual CORS headers set for:', origin);
+  }
+
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    console.log('🔄 Handling OPTIONS preflight request');
+    res.sendStatus(200);
+  } else {
+    next();
+  }
+});
 
 // ✅ Body parsing with size limits
 app.use(express.json({
