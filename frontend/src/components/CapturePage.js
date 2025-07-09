@@ -17,8 +17,9 @@ export default function CapturePage() {
   const [capturedPhotos, setCapturedPhotos] = useState([]); // Store captured photo data
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Fallback API URL if environment variable is not set
-  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
+  // Environment-aware API URL configuration
+  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL ||
+    (window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://stripphotobooth.onrender.com');
 
 
 
@@ -28,6 +29,10 @@ export default function CapturePage() {
       const ctx = canvasRef.current.getContext("2d");
       const width = 660;  // 2.2 inches × 300 DPI
       const height = 2100; // 7 inches × 300 DPI
+
+      // Ensure consistent canvas setup for both localhost and deployment
+      canvasRef.current.width = width;
+      canvasRef.current.height = height;
 
       canvasRef.current.width = width;
       canvasRef.current.height = height;

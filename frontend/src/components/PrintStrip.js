@@ -117,16 +117,27 @@ const PrintStrip = ({ strip, onClose }) => {
         </div>
       )}
 
-      {/* Simple Print CSS - 2.2×7 inches */}
+      {/* Consistent Print CSS - Same as print.css */}
       <style jsx>{`
         @media print {
           @page {
             size: 2.2in 7in;
-            margin: 0;
+            margin: 0 !important;
           }
 
-          body * {
+          html, body {
+            width: 2.2in !important;
+            height: 7in !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow: hidden !important;
+            background: white !important;
+            font-family: Arial, sans-serif !important;
+          }
+
+          * {
             visibility: hidden !important;
+            box-sizing: border-box !important;
           }
 
           .print-container,
@@ -145,6 +156,8 @@ const PrintStrip = ({ strip, onClose }) => {
             position: absolute !important;
             top: 0 !important;
             left: 0 !important;
+            border: none !important;
+            outline: none !important;
           }
 
           .strip-image {
@@ -154,8 +167,19 @@ const PrintStrip = ({ strip, onClose }) => {
             display: block !important;
             margin: 0 !important;
             padding: 0 !important;
+            border: none !important;
+            outline: none !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
+          }
+
+          .print-container, .strip-image {
+            page-break-inside: avoid !important;
+            page-break-after: avoid !important;
+            page-break-before: avoid !important;
           }
         }
 
