@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 
 const PrintStrip = ({ strip, onClose }) => {
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [showInstructions, setShowInstructions] = useState(true);
 
   useEffect(() => {
     if (!strip?.imageUrl) {
@@ -19,11 +20,7 @@ const PrintStrip = ({ strip, onClose }) => {
     img.onload = () => {
       console.log('✅ Image loaded successfully for printing');
       setImageLoaded(true);
-      // Print after image is loaded with longer delay
-      setTimeout(() => {
-        console.log('🖨️ Opening print dialog...');
-        window.print();
-      }, 500);
+      // Don't auto-print, wait for user to click print after seeing instructions
     };
 
     img.onerror = (error) => {
@@ -55,16 +52,79 @@ const PrintStrip = ({ strip, onClose }) => {
     };
   }, [onClose]);
 
+  const handlePrint = () => {
+    setShowInstructions(false);
+    setTimeout(() => {
+      console.log('🖨️ Opening print dialog...');
+      window.print();
+    }, 100);
+  };
+
   if (!strip || !imageLoaded) return null;
 
   return (
     <>
-      {/* Print styles */}
+      {/* Print Instructions Modal */}
+      {showInstructions && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl">
+            <div className="text-center mb-6">
+              <div className="text-4xl mb-3">🖨️</div>
+              <h2 className="text-2xl font-bold text-gray-800 mb-2">Print Instructions</h2>
+              <p className="text-gray-600">For best results, follow these steps:</p>
+            </div>
+
+            <div className="space-y-4 mb-6">
+              <div className="flex items-start space-x-3">
+                <div className="bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">1</div>
+                <div>
+                  <p className="font-semibold text-gray-800">Set Margins to "None"</p>
+                  <p className="text-sm text-gray-600">In print dialog: More Settings → Margins: None</p>
+                </div>
+              </div>
+
+              <div className="flex items-start space-x-3">
+                <div className="bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">2</div>
+                <div>
+                  <p className="font-semibold text-gray-800">Use "Actual Size"</p>
+                  <p className="text-sm text-gray-600">Scale: 100% (Actual Size)</p>
+                </div>
+              </div>
+
+              <div className="flex items-start space-x-3">
+                <div className="bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">3</div>
+                <div>
+                  <p className="font-semibold text-gray-800">Use 2×6 inch paper</p>
+                  <p className="text-sm text-gray-600">Or cut regular paper to 2×6 inches</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex space-x-3">
+              <button
+                onClick={onClose}
+                className="flex-1 px-4 py-3 bg-gray-200 text-gray-800 rounded-xl font-semibold hover:bg-gray-300 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handlePrint}
+                className="flex-1 px-4 py-3 bg-blue-500 text-white rounded-xl font-semibold hover:bg-blue-600 transition-colors"
+              >
+                Print Now
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* FULL BLEED Print styles - NO MARGINS */}
       <style jsx>{`
         @media print {
           @page {
             size: 2in 6in;
-            margin: 0.1in;
+            margin: 0 !important;
+            padding: 0 !important;
           }
 
           * {
@@ -81,38 +141,47 @@ const PrintStrip = ({ strip, onClose }) => {
             position: absolute !important;
             left: 0 !important;
             top: 0 !important;
-            width: 100% !important;
-            height: 100% !important;
-            display: flex !important;
-            justify-content: center !important;
-            align-items: flex-start !important;
-            padding-top: 0.1in !important;
+            width: 2in !important;
+            height: 6in !important;
+            margin: 0 !important;
+            padding: 0 !important;
             background: white !important;
+            overflow: hidden !important;
           }
 
           .print-strip-image {
-            width: 1.8in !important;
-            height: 5.8in !important;
-            max-width: 1.8in !important;
-            max-height: 5.8in !important;
-            object-fit: contain !important;
+            width: 2in !important;
+            height: 6in !important;
+            min-width: 2in !important;
+            min-height: 6in !important;
+            max-width: 2in !important;
+            max-height: 6in !important;
+            object-fit: cover !important;
+            object-position: center !important;
             display: block !important;
-            margin: 0 auto !important;
-            -webkit-print-color-adjust: exact !important;
-            color-adjust: exact !important;
-            print-color-adjust: exact !important;
-            image-rendering: -webkit-optimize-contrast !important;
-            image-rendering: crisp-edges !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
             border: none !important;
             outline: none !important;
             box-shadow: none !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            image-rendering: -webkit-optimize-contrast !important;
           }
 
-          /* Ensure no extra pages */
+          /* Ensure no extra pages and full coverage */
           html, body {
+            width: 2in !important;
             height: 6in !important;
+            max-width: 2in !important;
             max-height: 6in !important;
+            margin: 0 !important;
+            padding: 0 !important;
             overflow: hidden !important;
+            background: white !important;
           }
         }
 
