@@ -22,12 +22,12 @@ export default function CapturePage() {
 
 
 
-  // Initialize canvas with template background - 600×1800 pixels at 300 DPI (2×6 inch)
+  // Initialize canvas with template background - 660×2100 pixels at 300 DPI (2.2×7 inch)
   const initializeCanvas = useCallback(() => {
     if (canvasRef.current) {
       const ctx = canvasRef.current.getContext("2d");
-      const width = 600;  // 2 inches × 300 DPI
-      const height = 1800; // 6 inches × 300 DPI
+      const width = 660;   // 2.2 inches × 300 DPI - MATCHES PRINT CSS
+      const height = 2100; // 7 inches × 300 DPI - MATCHES PRINT CSS
 
       canvasRef.current.width = width;
       canvasRef.current.height = height;
@@ -142,13 +142,14 @@ export default function CapturePage() {
 
   // Beautiful frames with borders and stylish event name
   const addBeautifulText = (ctx) => {
-    const canvasWidth = 600;
-    const photoWidth = 500;
-    const photoHeight = 420;
-    const photoX = 50;
+    // FIXED: Use actual canvas dimensions (660×2100) for consistency
+    const canvasWidth = 660;   // Actual canvas width
+    const photoWidth = 560;    // Centered photos with proper margins
+    const photoHeight = 420;   // Keep same height
+    const photoX = 50;         // Centered: (660-560)/2 = 50px margin
 
-    // Photo frame positions
-    const photoPositions = [80, 580, 1080];
+    // Photo frame positions - Updated for 2100px height (7 inches)
+    const photoPositions = [80, 680, 1280]; // Evenly spaced for 2.2×7 format
 
     // Add beautiful borders around photo frames (without covering photos)
     photoPositions.forEach((photoY) => {
@@ -282,7 +283,7 @@ export default function CapturePage() {
       });
 
       // Position date at bottom of strip with good spacing from event name
-      const dateY = 1750; // Fixed position near bottom of 1800px strip
+      const dateY = 2000; // Fixed position near bottom of 2100px strip
       ctx.fillText(dateString, canvasWidth / 2, dateY);
       console.log(`📅 Drew date: ${dateString} at ${dateSize}px, positioned at bottom Y:${dateY}`);
       ctx.restore();
@@ -483,16 +484,16 @@ export default function CapturePage() {
       return;
     }
 
-    // BIGGER Photo frames with borders - elegant and spacious
-    const photoWidth = 500;   // Bigger width for better presence
-    const photoHeight = 420;  // Bigger height but still leaves space for event name
-    const photoX = 50;        // Centered X position with border space
+    // CONSISTENT Photo frames - match addBeautifulText dimensions exactly
+    const photoWidth = 560;   // FIXED: Match the text function dimensions
+    const photoHeight = 420;  // Keep same height
+    const photoX = 50;        // FIXED: Match the text function positioning
 
-    // Y positions for bigger photo boxes with space for event name at bottom
+    // Y positions for photo boxes - Updated for 2100px height (7 inches)
     const photoPositions = [
       80,   // First photo box Y position (top)
-      580,  // Second photo box Y position (middle)
-      1080  // Third photo box Y position (bottom) - leaves 200px for event name
+      680,  // Second photo box Y position (middle)
+      1280  // Third photo box Y position (bottom) - leaves space for event name
     ];
 
     const photoY = photoPositions[steps] || photoPositions[0];
@@ -951,8 +952,8 @@ export default function CapturePage() {
           {/* Preview Canvas (hidden) */}
           <canvas
             ref={canvasRef}
-            width="600"
-            height="1800"
+            width="660"
+            height="2100"
             className="hidden"
           />
         </div>
