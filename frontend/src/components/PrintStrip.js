@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import '../print.css';
 
 const PrintStrip = ({ strip, onClose }) => {
   const [imageLoaded, setImageLoaded] = useState(false);
@@ -117,78 +118,7 @@ const PrintStrip = ({ strip, onClose }) => {
         </div>
       )}
 
-      {/* Consistent Print CSS - Same as print.css */}
-      <style jsx>{`
-        @media print {
-          @page {
-            size: 2.2in 7in;
-            margin: 0 !important;
-          }
 
-          html, body {
-            width: 2.2in !important;
-            height: 7in !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            overflow: hidden !important;
-            background: white !important;
-            font-family: Arial, sans-serif !important;
-          }
-
-          * {
-            visibility: hidden !important;
-            box-sizing: border-box !important;
-          }
-
-          .print-container,
-          .print-container *,
-          .strip-image {
-            visibility: visible !important;
-          }
-
-          .print-container {
-            width: 2.2in !important;
-            height: 7in !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            overflow: hidden !important;
-            background: white !important;
-            position: absolute !important;
-            top: 0 !important;
-            left: 0 !important;
-            border: none !important;
-            outline: none !important;
-          }
-
-          .strip-image {
-            width: 2.2in !important;
-            height: 7in !important;
-            object-fit: fill !important;
-            display: block !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            border: none !important;
-            outline: none !important;
-            position: absolute !important;
-            top: 0 !important;
-            left: 0 !important;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
-
-          .print-container, .strip-image {
-            page-break-inside: avoid !important;
-            page-break-after: avoid !important;
-            page-break-before: avoid !important;
-          }
-        }
-
-        @media screen {
-          .print-container {
-            display: none !important;
-          }
-        }
-      `}</style>
 
       <div className="print-container">
         <img

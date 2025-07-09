@@ -1,70 +1,54 @@
-/* Consistent Print CSS - Works on Localhost and Deployment */
+/* SINGLE SOURCE OF TRUTH - Print CSS for 2.2×7 inch strips */
 
 @media print {
   @page {
     size: 2.2in 7in;
-    margin: 0 !important;
+    margin: 0;
   }
 
-  /* Force consistent rendering */
   html, body {
-    width: 2.2in !important;
-    height: 7in !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    overflow: hidden !important;
-    background: white !important;
-    font-family: Arial, sans-serif !important;
+    width: 2.2in;
+    height: 7in;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background: white;
   }
 
-  /* Hide everything first */
-  * {
-    visibility: hidden !important;
-    box-sizing: border-box !important;
+  body * {
+    visibility: hidden;
   }
 
-  /* Show only print elements */
   .print-container,
   .print-container *,
   .strip-image {
-    visibility: visible !important;
+    visibility: visible;
   }
 
   .print-container {
-    width: 2.2in !important;
-    height: 7in !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    overflow: hidden !important;
-    background: white !important;
-    position: absolute !important;
-    top: 0 !important;
-    left: 0 !important;
-    border: none !important;
-    outline: none !important;
+    width: 2.2in;
+    height: 7in;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background: white;
+    position: absolute;
+    top: 0;
+    left: 0;
   }
 
   .strip-image {
-    width: 2.2in !important;
-    height: 7in !important;
-    object-fit: fill !important;
-    display: block !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    border: none !important;
-    outline: none !important;
-    position: absolute !important;
-    top: 0 !important;
-    left: 0 !important;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-  }
-
-  /* Prevent page breaks */
-  .print-container, .strip-image {
-    page-break-inside: avoid !important;
-    page-break-after: avoid !important;
-    page-break-before: avoid !important;
+    width: 2.2in;
+    height: 7in;
+    object-fit: fill;
+    display: block;
+    margin: 0;
+    padding: 0;
+    position: absolute;
+    top: 0;
+    left: 0;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 }
 
