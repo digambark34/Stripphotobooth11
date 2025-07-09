@@ -22,12 +22,12 @@ export default function CapturePage() {
 
 
 
-  // Initialize canvas with template background - 600×1800 pixels at 300 DPI (2×6 inch)
+  // Initialize canvas with template background - 660×2100 pixels at 300 DPI (2.2×7 inch)
   const initializeCanvas = useCallback(() => {
     if (canvasRef.current) {
       const ctx = canvasRef.current.getContext("2d");
-      const width = 600;  // 2 inches × 300 DPI
-      const height = 1800; // 6 inches × 300 DPI
+      const width = 660;  // 2.2 inches × 300 DPI
+      const height = 2100; // 7 inches × 300 DPI
 
       canvasRef.current.width = width;
       canvasRef.current.height = height;
@@ -138,13 +138,13 @@ export default function CapturePage() {
 
   // Beautiful frames with borders and stylish event name
   const addBeautifulText = (ctx) => {
-    const canvasWidth = 600;
-    const photoWidth = 500;
-    const photoHeight = 420;
-    const photoX = 50;
+    const canvasWidth = 660;
+    const photoWidth = 550;
+    const photoHeight = 490;
+    const photoX = 55;
 
-    // Photo frame positions
-    const photoPositions = [80, 580, 1080];
+    // Photo frame positions for 2.2×7 format
+    const photoPositions = [90, 680, 1270];
 
     // Add beautiful borders around photo frames (without covering photos)
     photoPositions.forEach((photoY) => {
@@ -479,16 +479,16 @@ export default function CapturePage() {
       return;
     }
 
-    // BIGGER Photo frames with borders - elegant and spacious
-    const photoWidth = 500;   // Bigger width for better presence
-    const photoHeight = 420;  // Bigger height but still leaves space for event name
-    const photoX = 50;        // Centered X position with border space
+    // BIGGER Photo frames with borders - elegant and spacious (2.2×7 format)
+    const photoWidth = 550;   // Bigger width for 2.2 inch format
+    const photoHeight = 490;  // Bigger height for 7 inch format
+    const photoX = 55;        // Centered X position with border space
 
-    // Y positions for bigger photo boxes with space for event name at bottom
+    // Y positions for bigger photo boxes with space for event name at bottom (2.2×7 format)
     const photoPositions = [
-      80,   // First photo box Y position (top)
-      580,  // Second photo box Y position (middle)
-      1080  // Third photo box Y position (bottom) - leaves 200px for event name
+      90,   // First photo box Y position (top)
+      680,  // Second photo box Y position (middle)
+      1270  // Third photo box Y position (bottom) - leaves space for event name
     ];
 
     const photoY = photoPositions[steps] || photoPositions[0];
@@ -525,7 +525,7 @@ export default function CapturePage() {
       photoX,
       photoY,
       step: steps + 1,
-      physicalSize: '2×6 inches',
+      physicalSize: '2.2×7 inches',
       captureMode: 'SMART FILL - Complete box fill with template gradient preserved'
     });
 
@@ -608,7 +608,7 @@ export default function CapturePage() {
       templateImg.crossOrigin = 'anonymous'; // Enable CORS for Cloudinary images
       templateImg.onload = () => {
         // First: Draw template background to fill entire canvas (preserves gradient)
-        ctx.drawImage(templateImg, 0, 0, 600, 1800);
+        ctx.drawImage(templateImg, 0, 0, 660, 2100);
 
         // Then: Draw all captured photos on top (preserves template in gaps)
         let photosLoaded = 0;
@@ -641,7 +641,7 @@ export default function CapturePage() {
         });
         // Fallback to no template
         try {
-          ctx.clearRect(0, 0, 600, 1800);
+          ctx.clearRect(0, 0, 660, 2100);
           ctx.drawImage(tempCanvas, photoX, photoY);
           addBeautifulText(ctx);
         } catch (error) {
@@ -652,7 +652,7 @@ export default function CapturePage() {
       templateImg.src = settings.template;
     } else {
       // If no template, draw photo and add text on transparent background
-      ctx.clearRect(0, 0, 600, 1800);
+      ctx.clearRect(0, 0, 660, 2100);
       ctx.drawImage(tempCanvas, photoX, photoY);
       addBeautifulText(ctx);
     }
@@ -947,8 +947,8 @@ export default function CapturePage() {
           {/* Preview Canvas (hidden) */}
           <canvas
             ref={canvasRef}
-            width="600"
-            height="1800"
+            width="660"
+            height="2100"
             className="hidden"
           />
         </div>

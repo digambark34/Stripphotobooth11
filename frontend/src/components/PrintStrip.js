@@ -70,7 +70,7 @@ const PrintStrip = ({ strip, onClose }) => {
             <div className="text-center mb-6">
               <div className="text-4xl mb-3">🖨️</div>
               <h2 className="text-2xl font-bold text-gray-800 mb-2">Print Instructions</h2>
-              <p className="text-gray-600">For best results:</p>
+              <p className="text-gray-600">For 2.2×7 inch strips:</p>
             </div>
 
             <div className="space-y-4 mb-6">
@@ -87,6 +87,14 @@ const PrintStrip = ({ strip, onClose }) => {
                 <div>
                   <p className="font-semibold text-gray-800">Use "Actual Size"</p>
                   <p className="text-sm text-gray-600">Scale: 100% (Actual Size)</p>
+                </div>
+              </div>
+
+              <div className="flex items-start space-x-3">
+                <div className="bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">3</div>
+                <div>
+                  <p className="font-semibold text-gray-800">Paper Size: 2.2×7 inches</p>
+                  <p className="text-sm text-gray-600">Or use custom paper size</p>
                 </div>
               </div>
             </div>
@@ -109,11 +117,11 @@ const PrintStrip = ({ strip, onClose }) => {
         </div>
       )}
 
-      {/* Simple Print CSS */}
+      {/* Simple Print CSS - 2.2×7 inches */}
       <style jsx>{`
         @media print {
           @page {
-            size: 2in 6in;
+            size: 2.2in 7in;
             margin: 0;
           }
 
@@ -128,8 +136,8 @@ const PrintStrip = ({ strip, onClose }) => {
           }
 
           .print-container {
-            width: 2in !important;
-            height: 6in !important;
+            width: 2.2in !important;
+            height: 7in !important;
             margin: 0 !important;
             padding: 0 !important;
             overflow: hidden !important;
@@ -140,8 +148,8 @@ const PrintStrip = ({ strip, onClose }) => {
           }
 
           .strip-image {
-            width: 2in !important;
-            height: 6in !important;
+            width: 2.2in !important;
+            height: 7in !important;
             object-fit: fill !important;
             display: block !important;
             margin: 0 !important;
