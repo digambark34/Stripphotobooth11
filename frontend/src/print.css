@@ -1,409 +1,43 @@
-/* EPSON L3560 Print Styles - Full Coverage */
+/* Clean Print CSS */
 
 @media print {
-  @page {
-    size: 2in 6in;
-    margin: 0 !important;
-    padding: 0 !important;
-    border: none !important;
-  }
 
-  /* Hide everything except print content */
   body * {
     visibility: hidden !important;
   }
 
-  /* Show only the print container and its contents */
+  .printSection,
+  .printSection *,
   .print-container,
-  .print-container * {
-    visibility: visible !important;
-  }
-
-  /* CRITICAL: Full coverage print layout */
-  .print-container {
-    position: absolute !important;
-    left: 0 !important;
-    top: 0 !important;
-    width: 2in !important;
-    height: 6in !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    overflow: hidden !important;
-  }
-
-  .print-content {
-    width: 2in !important;
-    height: 6in !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    display: block !important;
-    overflow: hidden !important;
-  }
-
-  .print-content img {
-    width: 2in !important;
-    height: 6in !important;
-    max-width: 2in !important;
-    max-height: 6in !important;
-    object-fit: cover !important;
-    display: block !important;
-    margin: 0 !important;
-    padding: 0 !important;
-  }
-
-  /* Hide preview elements completely during print */
-  .print-preview,
-  .no-print {
-    display: none !important;
-    visibility: hidden !important;
-  }
-
-  /* Position print layout for clean printing */
-  .print-container {
-    position: absolute !important;
-    left: 0 !important;
-    top: 0 !important;
-    width: 100% !important;
-    height: auto !important;
-    max-height: 5.8in !important;
-    background: white !important;
-    overflow: hidden !important;
-    page-break-inside: avoid !important;
-    page-break-after: avoid !important;
-    margin: 0 !important;
-    padding: 0 !important;
-  }
-
-  /* Prevent any extra content from printing */
-  .print-container::after {
-    content: "" !important;
-    display: block !important;
-    page-break-after: avoid !important;
-  }
-
-  /* Force single page only */
-  * {
-    page-break-after: avoid !important;
-    page-break-inside: avoid !important;
-  }
-
-  /* Strip layout container for single strip on 2x6 paper - FULL BLEED */
-  .strip-print-layout {
-    width: 2in !important;        /* Full width */
-    height: 6in !important;       /* Full height */
-    max-height: 6in !important;
-    display: flex !important;
-    flex-direction: column !important;
-    justify-content: center !important;
-    align-items: center !important;
-    background: white !important;
-    page-break-inside: avoid !important;
-    page-break-after: avoid !important;
-    margin: 0 !important;         /* No margins */
-    padding: 0 !important;        /* No padding */
-    overflow: hidden !important;
-    box-sizing: border-box !important;
-    position: absolute !important;
-    top: 0 !important;
-    left: 0 !important;
-  }
-
-  /* Container for complete photo strip - FULL BLEED COVERAGE */
-  .complete-photo-strip {
-    display: flex !important;
-    flex-direction: column !important;
-    justify-content: center !important;
-    align-items: center !important;
-    width: 2in !important;        /* Full width */
-    height: 6in !important;       /* Full height */
-    page-break-inside: avoid !important;
-    page-break-after: avoid !important;
-    box-sizing: border-box !important;
-    overflow: hidden !important;
-    margin: 0 !important;         /* No margins */
-    padding: 0 !important;        /* No padding */
-    position: absolute !important;
-    top: 0 !important;
-    left: 0 !important;
-  }
-
-  /* EPSON L3560 CRITICAL: Strip must cover ENTIRE 2x6 area - NO WHITE SPACE */
+  .print-container *,
   .strip-image {
-    /* FORCE exact dimensions - slightly larger to ensure full coverage */
-    width: 2.1in !important;
-    height: 6.1in !important;
-    min-width: 2.1in !important;
-    min-height: 6.1in !important;
-    max-width: 2.1in !important;
-    max-height: 6.1in !important;
-
-    /* CRITICAL: Position to cover entire page with slight overflow */
-    position: absolute !important;
-    top: -0.05in !important;
-    left: -0.05in !important;
-    right: -0.05in !important;
-    bottom: -0.05in !important;
-
-    /* EPSON L3560: Fill strategy - cover entire area and beyond */
-    object-fit: cover !important;
-    object-position: center !important;
-
-    /* Remove ALL spacing */
-    margin: 0 !important;
-    padding: 0 !important;
-    border: none !important;
-    outline: none !important;
-    box-shadow: none !important;
-
-    /* Print quality for EPSON */
-    display: block !important;
-    page-break-inside: avoid !important;
-    page-break-after: avoid !important;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-    image-rendering: -webkit-optimize-contrast !important;
-    image-rendering: crisp-edges !important;
-
-    /* Ensure visibility and layering */
-    opacity: 1 !important;
     visibility: visible !important;
-    z-index: 999 !important;
-
-    /* EPSON specific - force background printing */
-    background-clip: border-box !important;
-    background-origin: border-box !important;
-  }
-
-  /* Single photo strip for 2x6 inch paper */
-  .single-photo-strip {
-    width: 1.7in !important;
-    height: auto !important;
-    max-height: 5.4in !important;
-    background: white !important;
-    border: none !important;
-    border-radius: 0.05in !important;
-    display: flex !important;
-    flex-direction: column !important;
-    padding: 0.05in !important;
-    margin: 0 auto 0 auto !important;
-    page-break-inside: avoid !important;
-    page-break-after: avoid !important;
-    overflow: hidden !important;
-    box-sizing: border-box !important;
-    position: relative !important;
-    top: 0 !important;
-    -webkit-print-color-adjust: exact !important;
-    color-adjust: exact !important;
-    print-color-adjust: exact !important;
-  }
-
-  /* Individual photo frame (3 photos per strip on 2x6 paper) */
-  .strip-photo-frame {
-    width: 100% !important;
-    height: 1.5in !important;
-    background-size: cover !important;
-    background-position: center !important;
-    background-repeat: no-repeat !important;
-    border: 1px solid #ddd !important;
-    border-radius: 0.05in !important;
-    margin-bottom: 0.05in !important;
-    box-sizing: border-box !important;
-    flex-shrink: 0 !important;
-    -webkit-print-color-adjust: exact !important;
-    color-adjust: exact !important;
-    print-color-adjust: exact !important;
-  }
-
-  /* Remove margin from last photo frame */
-  .strip-photo-frame:last-of-type {
-    margin-bottom: 0 !important;
-  }
-
-  /* Text section at bottom (like reference) */
-  .strip-text-section {
-    margin-top: auto !important;
-    text-align: center !important;
-    padding: 0.05in 0 !important;
-    flex-shrink: 0 !important;
-    box-sizing: border-box !important;
-    height: auto !important;
-    max-height: 0.5in !important;
-  }
-
-  .strip-event-name {
-    color: #333 !important;
-    font-size: 10pt !important;
-    font-family: 'Dancing Script', cursive, serif !important;
-    font-weight: 400 !important;
-    text-align: center !important;
-    margin-bottom: 0.02in !important;
-    line-height: 1.1 !important;
-  }
-
-  .strip-date {
-    color: #666 !important;
-    font-size: 7pt !important;
-    font-family: Arial, sans-serif !important;
-    font-weight: normal !important;
-    text-align: center !important;
-    letter-spacing: 0.3px !important;
-    line-height: 1.0 !important;
-  }
-
-  /* Hide screen-only elements */
-  .no-print,
-  .print-preview {
-    display: none !important;
-    visibility: hidden !important;
-  }
-
-  /* EPSON L3560: All images must OVERFLOW to eliminate white space */
-  img {
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-    width: 2.1in !important;
-    height: 6.1in !important;
-    max-width: 2.1in !important;
-    max-height: 6.1in !important;
-    min-width: 2.1in !important;
-    min-height: 6.1in !important;
-    object-fit: cover !important;
-    object-position: center !important;
-    position: absolute !important;
-    top: -0.05in !important;
-    left: -0.05in !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    border: none !important;
-    box-shadow: none !important;
-    z-index: 999 !important;
-  }
-
-  /* EPSON L3560: Specific targeting for ALL photo strip images */
-  .print-container img,
-  .print-content img,
-  .strip-image,
-  .print-strip-image,
-  img[src*="data:image"],
-  img[src*="cloudinary"] {
-    width: 2.1in !important;
-    height: 6.1in !important;
-    object-fit: cover !important;
-    position: absolute !important;
-    top: -0.05in !important;
-    left: -0.05in !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    border: none !important;
-    z-index: 999 !important;
-  }
-
-  /* Force background colors and images to print */
-  .strip-photo-frame,
-  .strip-photo-frame::before,
-  .strip-photo-frame::after,
-  .photo-strip,
-  .strip-header,
-  .strip-footer {
-    -webkit-print-color-adjust: exact !important;
-    color-adjust: exact !important;
-    print-color-adjust: exact !important;
-  }
-
-  /* Prevent page breaks within strips */
-  .photo-strip,
-  .strip-photo-frame {
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
-  }
-
-  /* Optimize for photo printing */
-  .strip-photo-frame {
-    image-rendering: -webkit-optimize-contrast !important;
-    image-rendering: crisp-edges !important;
-  }
-
-  /* CRITICAL: Full bleed coverage - no margins or padding */
-  body, html {
-    width: 2in !important;
-    height: 6in !important;
-    max-width: 2in !important;
-    max-height: 6in !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    overflow: hidden !important;
-    background: white !important;
   }
 
   .print-container {
     width: 2in !important;
     height: 6in !important;
-    max-width: 2in !important;
-    max-height: 6in !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    overflow: hidden !important;
-    position: absolute !important;
-    top: 0 !important;
-    left: 0 !important;
+    margin: 2.5in auto;
+    padding: 0;
+    overflow: hidden;
+    background: white;
+    position: relative;
   }
 
-  .strip-print-layout {
+  .strip-image {
     width: 2in !important;
     height: 6in !important;
-    max-width: 2in !important;
-    max-height: 6in !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    overflow: hidden !important;
-  }
-
-  /* Force single page only */
-  * {
-    page-break-after: avoid !important;
-    page-break-before: avoid !important;
+    object-fit: fill !important;
+    display: block;
+    margin: 0;
+    padding: 0;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 }
 
-
-
-
-
-/* Universal printer compatibility */
-@media print {
-  /* Force all elements to print backgrounds */
-  * {
-    -webkit-print-color-adjust: exact !important;
-    color-adjust: exact !important;
-    print-color-adjust: exact !important;
+@media screen {
+  .print-container {
+    display: none !important;
   }
-
-  /* Ensure white background and clean borders print */
-  .single-photo-strip {
-    background-color: white !important;
-    background-image: none !important;
-    border-color: #e5e5e5 !important;
-    border-style: solid !important;
-  }
-
-  /* Ensure text colors print correctly */
-  .strip-date {
-    color: #666 !important;
-    text-shadow: none !important;
-  }
-
-  .strip-event-name {
-    color: #333 !important;
-    text-shadow: none !important;
-  }
-
-  /* Ensure photo borders print */
-  .strip-photo-frame {
-    border-color: #ddd !important;
-    border-style: solid !important;
-  }
-
 }
-
-
-

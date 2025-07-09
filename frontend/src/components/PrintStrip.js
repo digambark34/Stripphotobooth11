@@ -109,85 +109,62 @@ const PrintStrip = ({ strip, onClose }) => {
         </div>
       )}
 
-      {/* Page Break Print CSS - 7x7 Format */}
+      {/* Simple Print CSS */}
       <style jsx>{`
-        .printSection {
-          width: 7in;
-          height: 7in;
-          margin-top: 3rem;
-          page-break-after: always;
-        }
-
-        @page {
-          size: 7in 7in;
-          margin: 0 0 0 0;
-        }
-
         @media print {
-          ::-webkit-scrollbar {
-            width: 0;
-            height: 0;
-          }
-
           @page {
-            size: 7in 7in;
-            margin: 0 0 0 0;
+            size: 2in 6in;
+            margin: 0;
           }
 
-          .hideOnPrint {
-            display: none;
+          body * {
+            visibility: hidden !important;
           }
 
-          .printSection {
-            margin-top: 0rem;
+          .print-container,
+          .print-container *,
+          .strip-image {
+            visibility: visible !important;
           }
 
           .print-container {
             width: 2in !important;
             height: 6in !important;
-            margin: 2.5in auto;
-            padding: 0;
-            overflow: hidden;
-            background: white;
-            position: relative;
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow: hidden !important;
+            background: white !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
           }
 
           .strip-image {
             width: 2in !important;
             height: 6in !important;
             object-fit: fill !important;
-            display: block;
-            margin: 0;
-            padding: 0;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-          }
-
-          body * {
-            visibility: hidden;
-          }
-
-          .printSection, .printSection * {
-            visibility: visible;
+            display: block !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
         }
 
         @media screen {
-          .printSection {
+          .print-container {
             display: none !important;
           }
         }
       `}</style>
 
-      <div className="printSection">
-        <div className="print-container">
-          <img
-            className="strip-image"
-            src={strip.imageUrl}
-            alt="Photo Strip"
-            crossOrigin="anonymous"
-          />
-        </div>
+      <div className="print-container">
+        <img
+          className="strip-image"
+          src={strip.imageUrl}
+          alt="Photo Strip"
+          crossOrigin="anonymous"
+        />
       </div>
     </>
   );
