@@ -1,9 +1,17 @@
-/* Simple Print CSS - 2.2×7 inch strips */
+/* Single Page Print CSS - 2.2×7 inch strips */
 
 @media print {
   @page {
     size: 2.2in 7in;
     margin: 0;
+  }
+
+  html, body {
+    width: 2.2in;
+    height: 7in;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
   }
 
   body * {
@@ -40,6 +48,13 @@
     left: 0;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+  }
+
+  /* Force single page only */
+  * {
+    page-break-after: avoid;
+    page-break-before: avoid;
+    page-break-inside: avoid;
   }
 }
 
