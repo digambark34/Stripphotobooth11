@@ -55,7 +55,6 @@ const PrintStrip = ({ strip, onClose }) => {
   const handlePrint = () => {
     setShowInstructions(false);
     setTimeout(() => {
-      console.log('🖨️ Opening print dialog...');
       window.print();
     }, 100);
   };
@@ -110,25 +109,43 @@ const PrintStrip = ({ strip, onClose }) => {
         </div>
       )}
 
-      {/* Clean Print CSS - Exactly Like Download */}
+      {/* Page Break Print CSS - 7x7 Format */}
       <style jsx>{`
+        .printSection {
+          width: 7in;
+          height: 7in;
+          margin-top: 3rem;
+          page-break-after: always;
+        }
+
+        @page {
+          size: 7in 7in;
+          margin: 0 0 0 0;
+        }
+
         @media print {
-          @page {
-            size: 2in 6in;
-            margin: 0;
+          ::-webkit-scrollbar {
+            width: 0;
+            height: 0;
           }
 
-          html, body {
-            margin: 0;
-            padding: 0;
-            height: 6in;
-            width: 2in;
+          @page {
+            size: 7in 7in;
+            margin: 0 0 0 0;
+          }
+
+          .hideOnPrint {
+            display: none;
+          }
+
+          .printSection {
+            margin-top: 0rem;
           }
 
           .print-container {
             width: 2in !important;
             height: 6in !important;
-            margin: 0;
+            margin: 2.5in auto;
             padding: 0;
             overflow: hidden;
             background: white;
@@ -150,25 +167,27 @@ const PrintStrip = ({ strip, onClose }) => {
             visibility: hidden;
           }
 
-          .print-container, .print-container * {
+          .printSection, .printSection * {
             visibility: visible;
           }
         }
 
         @media screen {
-          .print-container {
+          .printSection {
             display: none !important;
           }
         }
       `}</style>
 
-      <div className="print-container">
-        <img
-          className="strip-image"
-          src={strip.imageUrl}
-          alt="Photo Strip"
-          crossOrigin="anonymous"
-        />
+      <div className="printSection">
+        <div className="print-container">
+          <img
+            className="strip-image"
+            src={strip.imageUrl}
+            alt="Photo Strip"
+            crossOrigin="anonymous"
+          />
+        </div>
       </div>
     </>
   );
