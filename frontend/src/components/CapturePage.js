@@ -1,7 +1,6 @@
 import { useRef, useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import './MobileCamera.css';
-import DebugInfo from "./DebugInfo";
 
 export default function CapturePage() {
   const videoRef = useRef(null);
@@ -18,37 +17,17 @@ export default function CapturePage() {
   const [capturedPhotos, setCapturedPhotos] = useState([]); // Store captured photo data
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Environment-aware API URL configuration with debugging
-  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL ||
-    (window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://stripphotobooth.onrender.com');
-
-  // Debug environment info
-  console.log('🌍 Environment Info:', {
-    hostname: window.location.hostname,
-    nodeEnv: process.env.NODE_ENV,
-    apiUrl: API_BASE_URL,
-    isLocalhost: window.location.hostname === 'localhost'
-  });
+  // Fallback API URL if environment variable is not set
+  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
 
 
 
-  // Initialize canvas with template background - 660×2100 pixels at 300 DPI (2.2×7 inch)
+  // Initialize canvas with template background - 600×1800 pixels at 300 DPI (2×6 inch)
   const initializeCanvas = useCallback(() => {
     if (canvasRef.current) {
       const ctx = canvasRef.current.getContext("2d");
-      const width = 660;  // 2.2 inches × 300 DPI
-      const height = 2100; // 7 inches × 300 DPI
-
-      // FORCE identical canvas setup for both localhost and deployment
-      canvasRef.current.width = width;
-      canvasRef.current.height = height;
-
-      // Clear any existing content
-      ctx.clearRect(0, 0, width, height);
-
-      // Set consistent rendering properties
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = 'high';
+      const width = 600;  // 2 inches × 300 DPI
+      const height = 1800; // 6 inches × 300 DPI
 
       canvasRef.current.width = width;
       canvasRef.current.height = height;
@@ -58,15 +37,18 @@ export default function CapturePage() {
 
       // Apply template background if available (this is the colorful design)
       if (settings.template) {
+        console.log('🖼️ Loading template:', settings.template.substring(0, 50) + '...');
         const templateImg = new Image();
         templateImg.crossOrigin = 'anonymous'; // Enable CORS for Cloudinary images
         templateImg.onload = () => {
+          console.log('✅ Template loaded successfully, drawing to canvas');
           // Draw template background to fill entire canvas
           ctx.drawImage(templateImg, 0, 0, width, height);
           // Add beautiful text overlay
           addBeautifulText(ctx);
         };
         templateImg.onerror = () => {
+          console.error('❌ Failed to load template image');
           // Fallback to transparent background (no white layer)
           ctx.clearRect(0, 0, width, height);
           // Add beautiful text even on fallback
@@ -74,6 +56,7 @@ export default function CapturePage() {
         };
         templateImg.src = settings.template;
       } else {
+        console.log('⚠️ No template found, using transparent background');
         // Fallback: transparent background if no template (no white layer)
         ctx.clearRect(0, 0, width, height);
         // Add beautiful text on transparent background
@@ -159,13 +142,13 @@ export default function CapturePage() {
 
   // Beautiful frames with borders and stylish event name
   const addBeautifulText = (ctx) => {
-    const canvasWidth = 660;
-    const photoWidth = 550;
-    const photoHeight = 490;
-    const photoX = 55;
+    const canvasWidth = 600;
+    const photoWidth = 500;
+    const photoHeight = 420;
+    const photoX = 50;
 
-    // Photo frame positions for 2.2×7 format
-    const photoPositions = [90, 680, 1270];
+    // Photo frame positions
+    const photoPositions = [80, 580, 1080];
 
     // Add beautiful borders around photo frames (without covering photos)
     photoPositions.forEach((photoY) => {
@@ -500,16 +483,16 @@ export default function CapturePage() {
       return;
     }
 
-    // BIGGER Photo frames with borders - elegant and spacious (2.2×7 format)
-    const photoWidth = 550;   // Bigger width for 2.2 inch format
-    const photoHeight = 490;  // Bigger height for 7 inch format
-    const photoX = 55;        // Centered X position with border space
+    // BIGGER Photo frames with borders - elegant and spacious
+    const photoWidth = 500;   // Bigger width for better presence
+    const photoHeight = 420;  // Bigger height but still leaves space for event name
+    const photoX = 50;        // Centered X position with border space
 
-    // Y positions for bigger photo boxes with space for event name at bottom (2.2×7 format)
+    // Y positions for bigger photo boxes with space for event name at bottom
     const photoPositions = [
-      90,   // First photo box Y position (top)
-      680,  // Second photo box Y position (middle)
-      1270  // Third photo box Y position (bottom) - leaves space for event name
+      80,   // First photo box Y position (top)
+      580,  // Second photo box Y position (middle)
+      1080  // Third photo box Y position (bottom) - leaves 200px for event name
     ];
 
     const photoY = photoPositions[steps] || photoPositions[0];
@@ -546,7 +529,7 @@ export default function CapturePage() {
       photoX,
       photoY,
       step: steps + 1,
-      physicalSize: '2.2×7 inches',
+      physicalSize: '2×6 inches',
       captureMode: 'SMART FILL - Complete box fill with template gradient preserved'
     });
 
@@ -629,7 +612,7 @@ export default function CapturePage() {
       templateImg.crossOrigin = 'anonymous'; // Enable CORS for Cloudinary images
       templateImg.onload = () => {
         // First: Draw template background to fill entire canvas (preserves gradient)
-        ctx.drawImage(templateImg, 0, 0, 660, 2100);
+        ctx.drawImage(templateImg, 0, 0, 600, 1800);
 
         // Then: Draw all captured photos on top (preserves template in gaps)
         let photosLoaded = 0;
@@ -662,7 +645,7 @@ export default function CapturePage() {
         });
         // Fallback to no template
         try {
-          ctx.clearRect(0, 0, 660, 2100);
+          ctx.clearRect(0, 0, 600, 1800);
           ctx.drawImage(tempCanvas, photoX, photoY);
           addBeautifulText(ctx);
         } catch (error) {
@@ -673,7 +656,7 @@ export default function CapturePage() {
       templateImg.src = settings.template;
     } else {
       // If no template, draw photo and add text on transparent background
-      ctx.clearRect(0, 0, 660, 2100);
+      ctx.clearRect(0, 0, 600, 1800);
       ctx.drawImage(tempCanvas, photoX, photoY);
       addBeautifulText(ctx);
     }
@@ -968,15 +951,12 @@ export default function CapturePage() {
           {/* Preview Canvas (hidden) */}
           <canvas
             ref={canvasRef}
-            width="660"
-            height="2100"
+            width="600"
+            height="1800"
             className="hidden"
           />
         </div>
       </div>
-
-      {/* Debug component for troubleshooting localhost vs deployment differences */}
-      <DebugInfo />
     </div>
   );
 }

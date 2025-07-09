@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import '../print.css';
 
 const PrintStrip = ({ strip, onClose }) => {
   const [imageLoaded, setImageLoaded] = useState(false);
@@ -7,26 +6,19 @@ const PrintStrip = ({ strip, onClose }) => {
 
   useEffect(() => {
     if (!strip?.imageUrl) {
-      console.error('No image URL provided for printing');
       onClose();
       return;
     }
 
-    console.log('🖨️ Loading image for printing:', strip.imageUrl);
-
     // Preload the image to ensure it's ready for printing
     const img = new Image();
-    img.crossOrigin = 'anonymous'; // Handle CORS for Cloudinary images
+    img.crossOrigin = 'anonymous';
 
     img.onload = () => {
-      console.log('✅ Image loaded successfully for printing');
       setImageLoaded(true);
-      // Don't auto-print, wait for user to click print after seeing instructions
     };
 
-    img.onerror = (error) => {
-      console.error('❌ Failed to load image for printing:', error);
-      console.error('Image URL:', strip.imageUrl);
+    img.onerror = () => {
       alert('Failed to load image for printing. Please try downloading instead.');
       onClose();
     };
@@ -35,21 +27,14 @@ const PrintStrip = ({ strip, onClose }) => {
   }, [strip, onClose]);
 
   useEffect(() => {
-    // Listen for print events
     const handleAfterPrint = () => {
       onClose();
     };
 
-    const handleBeforePrint = () => {
-      console.log('Print dialog opened');
-    };
-
     window.addEventListener('afterprint', handleAfterPrint);
-    window.addEventListener('beforeprint', handleBeforePrint);
 
     return () => {
       window.removeEventListener('afterprint', handleAfterPrint);
-      window.removeEventListener('beforeprint', handleBeforePrint);
     };
   }, [onClose]);
 
@@ -71,9 +56,9 @@ const PrintStrip = ({ strip, onClose }) => {
             <div className="text-center mb-6">
               <div className="text-4xl mb-3">🖨️</div>
               <h2 className="text-2xl font-bold text-gray-800 mb-2">Print Instructions</h2>
-              <p className="text-gray-600">For 2.2×7 inch strips:</p>
+              <p className="text-gray-600">For best results:</p>
             </div>
-
+            
             <div className="space-y-4 mb-6">
               <div className="flex items-start space-x-3">
                 <div className="bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">1</div>
@@ -82,20 +67,12 @@ const PrintStrip = ({ strip, onClose }) => {
                   <p className="text-sm text-gray-600">In print dialog: More Settings → Margins: None</p>
                 </div>
               </div>
-
+              
               <div className="flex items-start space-x-3">
                 <div className="bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">2</div>
                 <div>
                   <p className="font-semibold text-gray-800">Use "Actual Size"</p>
                   <p className="text-sm text-gray-600">Scale: 100% (Actual Size)</p>
-                </div>
-              </div>
-
-              <div className="flex items-start space-x-3">
-                <div className="bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">3</div>
-                <div>
-                  <p className="font-semibold text-gray-800">Paper Size: 2.2×7 inches</p>
-                  <p className="text-sm text-gray-600">Or use custom paper size</p>
                 </div>
               </div>
             </div>
@@ -117,8 +94,6 @@ const PrintStrip = ({ strip, onClose }) => {
           </div>
         </div>
       )}
-
-
 
       <div className="print-container">
         <img

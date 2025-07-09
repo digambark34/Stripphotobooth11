@@ -11,10 +11,6 @@ yarn-error.log*
 .env.test.local
 .env.production.local
 
-# Build outputs
-build/
-dist/
-
 # Logs
 logs
 *.log
@@ -46,9 +42,6 @@ jspm_packages/
 # Yarn Integrity file
 .yarn-integrity
 
-# dotenv environment variables file
-.env
-
 # IDE files
 .vscode/
 .idea/
@@ -65,25 +58,13 @@ jspm_packages/
 ehthumbs.db
 Thumbs.db
 
-# Temporary folders
-tmp/
-temp/
-
 # Database files
 *.db
 *.sqlite
 *.sqlite3
 
-# Cloudinary cache
-.cloudinary/
+# Uploads directory (if any)
+uploads/
 
 # PM2 process files
 ecosystem.config.js
-
-# Backup files
-*.backup
-*.bak
-
-# Local development files
-local/
-dev/
