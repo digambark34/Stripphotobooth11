@@ -1,6 +1,7 @@
 import { useRef, useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import './MobileCamera.css';
+import DebugInfo from "./DebugInfo";
 
 export default function CapturePage() {
   const videoRef = useRef(null);
@@ -17,9 +18,17 @@ export default function CapturePage() {
   const [capturedPhotos, setCapturedPhotos] = useState([]); // Store captured photo data
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Environment-aware API URL configuration
+  // Environment-aware API URL configuration with debugging
   const API_BASE_URL = process.env.REACT_APP_API_BASE_URL ||
     (window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://stripphotobooth.onrender.com');
+
+  // Debug environment info
+  console.log('🌍 Environment Info:', {
+    hostname: window.location.hostname,
+    nodeEnv: process.env.NODE_ENV,
+    apiUrl: API_BASE_URL,
+    isLocalhost: window.location.hostname === 'localhost'
+  });
 
 
 
@@ -30,9 +39,16 @@ export default function CapturePage() {
       const width = 660;  // 2.2 inches × 300 DPI
       const height = 2100; // 7 inches × 300 DPI
 
-      // Ensure consistent canvas setup for both localhost and deployment
+      // FORCE identical canvas setup for both localhost and deployment
       canvasRef.current.width = width;
       canvasRef.current.height = height;
+
+      // Clear any existing content
+      ctx.clearRect(0, 0, width, height);
+
+      // Set consistent rendering properties
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
 
       canvasRef.current.width = width;
       canvasRef.current.height = height;
@@ -958,6 +974,9 @@ export default function CapturePage() {
           />
         </div>
       </div>
+
+      {/* Debug component for troubleshooting localhost vs deployment differences */}
+      <DebugInfo />
     </div>
   );
 }
