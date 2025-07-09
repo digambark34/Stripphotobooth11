@@ -110,7 +110,7 @@ const PrintStrip = ({ strip, onClose }) => {
         </div>
       )}
 
-      {/* Simple Print - Same as Download */}
+      {/* Clean Print CSS - Exactly Like Download */}
       <style jsx>{`
         @media print {
           @page {
@@ -118,54 +118,56 @@ const PrintStrip = ({ strip, onClose }) => {
             margin: 0;
           }
 
-          * {
-            visibility: hidden !important;
+          html, body {
+            margin: 0;
+            padding: 0;
+            height: 6in;
+            width: 2in;
           }
 
-          .print-strip-container,
-          .print-strip-image {
-            visibility: visible !important;
-          }
-
-          .print-strip-container {
-            position: absolute !important;
-            top: 0 !important;
-            left: 0 !important;
+          .print-container {
             width: 2in !important;
             height: 6in !important;
-            margin: 0 !important;
-            padding: 0 !important;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: white;
+            position: relative;
           }
 
-          .print-strip-image {
+          .strip-image {
             width: 2in !important;
             height: 6in !important;
-            object-fit: cover !important;
-            display: block !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            border: none !important;
+            object-fit: fill !important;
+            display: block;
+            margin: 0;
+            padding: 0;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+
+          body * {
+            visibility: hidden;
+          }
+
+          .print-container, .print-container * {
+            visibility: visible;
           }
         }
 
         @media screen {
-          .print-strip-container {
+          .print-container {
             display: none !important;
           }
         }
       `}</style>
 
-      <div className="print-strip-container">
+      <div className="print-container">
         <img
-          className="print-strip-image"
+          className="strip-image"
           src={strip.imageUrl}
           alt="Photo Strip"
           crossOrigin="anonymous"
-          onLoad={() => console.log('✅ Print image rendered successfully')}
-          onError={(e) => {
-            console.error('❌ Print image render failed:', e);
-            console.error('Image URL:', strip.imageUrl);
-          }}
         />
       </div>
     </>
