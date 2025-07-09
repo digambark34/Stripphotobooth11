@@ -37,18 +37,15 @@ export default function CapturePage() {
 
       // Apply template background if available (this is the colorful design)
       if (settings.template) {
-        console.log('🖼️ Loading template:', settings.template.substring(0, 50) + '...');
         const templateImg = new Image();
         templateImg.crossOrigin = 'anonymous'; // Enable CORS for Cloudinary images
         templateImg.onload = () => {
-          console.log('✅ Template loaded successfully, drawing to canvas');
           // Draw template background to fill entire canvas
           ctx.drawImage(templateImg, 0, 0, width, height);
           // Add beautiful text overlay
           addBeautifulText(ctx);
         };
         templateImg.onerror = () => {
-          console.error('❌ Failed to load template image');
           // Fallback to transparent background (no white layer)
           ctx.clearRect(0, 0, width, height);
           // Add beautiful text even on fallback
@@ -56,7 +53,6 @@ export default function CapturePage() {
         };
         templateImg.src = settings.template;
       } else {
-        console.log('⚠️ No template found, using transparent background');
         // Fallback: transparent background if no template (no white layer)
         ctx.clearRect(0, 0, width, height);
         // Add beautiful text on transparent background

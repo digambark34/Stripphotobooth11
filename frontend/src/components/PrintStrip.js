@@ -70,32 +70,40 @@ const PrintStrip = ({ strip, onClose }) => {
           <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl">
             <div className="text-center mb-6">
               <div className="text-4xl mb-3">🖨️</div>
-              <h2 className="text-2xl font-bold text-gray-800 mb-2">Print Instructions</h2>
-              <p className="text-gray-600">For best results, follow these steps:</p>
+              <h2 className="text-2xl font-bold text-gray-800 mb-2">EPSON L3560 Print Setup</h2>
+              <p className="text-gray-600">Critical settings for full coverage:</p>
             </div>
 
             <div className="space-y-4 mb-6">
               <div className="flex items-start space-x-3">
-                <div className="bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">1</div>
+                <div className="bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">1</div>
+                <div>
+                  <p className="font-semibold text-gray-800">Enable "Borderless Printing"</p>
+                  <p className="text-sm text-gray-600">EPSON Settings → Borderless: ON</p>
+                </div>
+              </div>
+
+              <div className="flex items-start space-x-3">
+                <div className="bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">2</div>
                 <div>
                   <p className="font-semibold text-gray-800">Set Margins to "None"</p>
-                  <p className="text-sm text-gray-600">In print dialog: More Settings → Margins: None</p>
+                  <p className="text-sm text-gray-600">Browser: More Settings → Margins: None</p>
                 </div>
               </div>
 
               <div className="flex items-start space-x-3">
-                <div className="bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">2</div>
+                <div className="bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">3</div>
                 <div>
-                  <p className="font-semibold text-gray-800">Use "Actual Size"</p>
-                  <p className="text-sm text-gray-600">Scale: 100% (Actual Size)</p>
+                  <p className="font-semibold text-gray-800">Paper: 4×6 inch (North America)</p>
+                  <p className="text-sm text-gray-600">Will print 2×6 strip on 4×6 paper</p>
                 </div>
               </div>
 
               <div className="flex items-start space-x-3">
-                <div className="bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">3</div>
+                <div className="bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">4</div>
                 <div>
-                  <p className="font-semibold text-gray-800">Use 2×6 inch paper</p>
-                  <p className="text-sm text-gray-600">Or cut regular paper to 2×6 inches</p>
+                  <p className="font-semibold text-gray-800">Quality: High/Best</p>
+                  <p className="text-sm text-gray-600">For professional photo booth quality</p>
                 </div>
               </div>
             </div>
@@ -150,26 +158,39 @@ const PrintStrip = ({ strip, onClose }) => {
           }
 
           .print-strip-image {
-            width: 2in !important;
-            height: 6in !important;
-            min-width: 2in !important;
-            min-height: 6in !important;
-            max-width: 2in !important;
-            max-height: 6in !important;
+            /* EPSON L3560: Slightly larger to ensure full coverage */
+            width: 2.1in !important;
+            height: 6.1in !important;
+            min-width: 2.1in !important;
+            min-height: 6.1in !important;
+            max-width: 2.1in !important;
+            max-height: 6.1in !important;
+
+            /* CRITICAL: Cover entire area with slight overflow */
             object-fit: cover !important;
             object-position: center !important;
             display: block !important;
             position: absolute !important;
-            top: 0 !important;
-            left: 0 !important;
+            top: -0.05in !important;
+            left: -0.05in !important;
+
+            /* Remove ALL spacing */
             margin: 0 !important;
             padding: 0 !important;
             border: none !important;
             outline: none !important;
             box-shadow: none !important;
+
+            /* EPSON print quality */
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
             image-rendering: -webkit-optimize-contrast !important;
+            image-rendering: crisp-edges !important;
+
+            /* Force visibility */
+            z-index: 999 !important;
+            opacity: 1 !important;
+            visibility: visible !important;
           }
 
           /* Ensure no extra pages and full coverage */

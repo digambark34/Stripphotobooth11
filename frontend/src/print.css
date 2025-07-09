@@ -1,28 +1,11 @@
-/* Print-specific styles for photo strips */
+/* EPSON L3560 Print Styles - Full Coverage */
 
 @media print {
-  /* FORCE no margins - override browser defaults */
   @page {
     size: 2in 6in;
     margin: 0 !important;
     padding: 0 !important;
     border: none !important;
-  }
-
-  /* Additional page rules for different browsers */
-  @page :first {
-    margin: 0 !important;
-    padding: 0 !important;
-  }
-
-  @page :left {
-    margin: 0 !important;
-    padding: 0 !important;
-  }
-
-  @page :right {
-    margin: 0 !important;
-    padding: 0 !important;
   }
 
   /* Hide everything except print content */
@@ -144,45 +127,51 @@
     left: 0 !important;
   }
 
-  /* CRITICAL: Strip image must fill entire 2x6 area with NO white space */
+  /* EPSON L3560 CRITICAL: Strip must cover ENTIRE 2x6 area - NO WHITE SPACE */
   .strip-image {
-    /* Exact dimensions to fill entire printable area */
-    width: 2in !important;
-    height: 6in !important;
-    min-width: 2in !important;
-    min-height: 6in !important;
-    max-width: 2in !important;
-    max-height: 6in !important;
+    /* FORCE exact dimensions - slightly larger to ensure full coverage */
+    width: 2.1in !important;
+    height: 6.1in !important;
+    min-width: 2.1in !important;
+    min-height: 6.1in !important;
+    max-width: 2.1in !important;
+    max-height: 6.1in !important;
 
-    /* Positioning to cover entire page */
+    /* CRITICAL: Position to cover entire page with slight overflow */
     position: absolute !important;
-    top: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    bottom: 0 !important;
+    top: -0.05in !important;
+    left: -0.05in !important;
+    right: -0.05in !important;
+    bottom: -0.05in !important;
 
-    /* Fill strategy - cover entire area */
+    /* EPSON L3560: Fill strategy - cover entire area and beyond */
     object-fit: cover !important;
     object-position: center !important;
 
-    /* Remove all spacing */
+    /* Remove ALL spacing */
     margin: 0 !important;
     padding: 0 !important;
     border: none !important;
     outline: none !important;
+    box-shadow: none !important;
 
-    /* Print quality */
+    /* Print quality for EPSON */
     display: block !important;
     page-break-inside: avoid !important;
     page-break-after: avoid !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
     image-rendering: -webkit-optimize-contrast !important;
+    image-rendering: crisp-edges !important;
 
-    /* Ensure visibility */
+    /* Ensure visibility and layering */
     opacity: 1 !important;
     visibility: visible !important;
-    z-index: 1 !important;
+    z-index: 999 !important;
+
+    /* EPSON specific - force background printing */
+    background-clip: border-box !important;
+    background-origin: border-box !important;
   }
 
   /* Single photo strip for 2x6 inch paper */
@@ -268,39 +257,45 @@
     visibility: hidden !important;
   }
 
-  /* CRITICAL: All images in print context must fill full area */
+  /* EPSON L3560: All images must OVERFLOW to eliminate white space */
   img {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
-    width: 2in !important;
-    height: 6in !important;
-    max-width: 2in !important;
-    max-height: 6in !important;
-    min-width: 2in !important;
-    min-height: 6in !important;
+    width: 2.1in !important;
+    height: 6.1in !important;
+    max-width: 2.1in !important;
+    max-height: 6.1in !important;
+    min-width: 2.1in !important;
+    min-height: 6.1in !important;
     object-fit: cover !important;
     object-position: center !important;
     position: absolute !important;
-    top: 0 !important;
-    left: 0 !important;
+    top: -0.05in !important;
+    left: -0.05in !important;
     margin: 0 !important;
     padding: 0 !important;
     border: none !important;
+    box-shadow: none !important;
+    z-index: 999 !important;
   }
 
-  /* Specific targeting for photo strip images */
+  /* EPSON L3560: Specific targeting for ALL photo strip images */
   .print-container img,
   .print-content img,
   .strip-image,
-  img[src*="data:image"] {
-    width: 2in !important;
-    height: 6in !important;
+  .print-strip-image,
+  img[src*="data:image"],
+  img[src*="cloudinary"] {
+    width: 2.1in !important;
+    height: 6.1in !important;
     object-fit: cover !important;
     position: absolute !important;
-    top: 0 !important;
-    left: 0 !important;
+    top: -0.05in !important;
+    left: -0.05in !important;
     margin: 0 !important;
     padding: 0 !important;
+    border: none !important;
+    z-index: 999 !important;
   }
 
   /* Force background colors and images to print */
@@ -370,126 +365,9 @@
   }
 }
 
-/* Screen preview styles */
-@media screen {
-  .print-container {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background: rgba(0, 0, 0, 0.95);
-    z-index: 9999;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    backdrop-filter: blur(5px);
-  }
 
-  .print-preview {
-    background: white;
-    padding: 24px;
-    border-radius: 12px;
-    max-width: 90vw;
-    max-height: 90vh;
-    overflow: auto;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-    border: 1px solid #e5e7eb;
-  }
 
-  .preview-container {
-    display: flex;
-    justify-content: center;
-    margin: 0 auto;
-    transform: scale(0.8);
-    transform-origin: center;
-  }
 
-  .preview-single-strip {
-    width: 120px !important;
-    height: 360px !important;
-    background: white;
-    border: 2px solid #e5e5e5;
-    border-radius: 8px;
-    display: flex;
-    flex-direction: column;
-    padding: 8px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-  }
-
-  .preview-photo-frame {
-    width: 100%;
-    height: 90px;
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    margin-bottom: 8px;
-  }
-
-  .preview-text-section {
-    margin-top: auto;
-    text-align: center;
-    padding: 8px 0;
-  }
-
-  .preview-event-name {
-    color: #333;
-    font-size: 12px;
-    font-family: 'Dancing Script', cursive, serif;
-    font-weight: 400;
-    text-align: center;
-    margin-bottom: 4px;
-    line-height: 1.1;
-  }
-
-  .preview-date {
-    color: #666;
-    font-size: 9px;
-    font-family: Arial, sans-serif;
-    font-weight: normal;
-    text-align: center;
-    letter-spacing: 0.3px;
-  }
-}
-
-/* High DPI print optimization */
-@media print and (min-resolution: 300dpi) {
-  .strip-photo {
-    image-rendering: -webkit-optimize-contrast;
-    image-rendering: crisp-edges;
-  }
-}
-
-/* Landscape orientation support */
-@media print and (orientation: landscape) {
-  @page {
-    size: A4 landscape;
-    margin: 8mm;
-  }
-  
-  .strip-grid {
-    width: 240mm;
-    height: 170mm;
-  }
-}
-
-/* Color print optimization */
-@media print and (color) {
-  .strip-photo {
-    -webkit-filter: contrast(1.1) saturate(1.1);
-    filter: contrast(1.1) saturate(1.1);
-  }
-}
-
-/* Monochrome print fallback */
-@media print and (monochrome) {
-  .strip-photo {
-    -webkit-filter: grayscale(1) contrast(1.2);
-    filter: grayscale(1) contrast(1.2);
-  }
-}
 
 /* Universal printer compatibility */
 @media print {
@@ -525,37 +403,6 @@
     border-style: solid !important;
   }
 
-  /* High contrast mode support */
-  @media (prefers-contrast: high) {
-    .single-photo-strip {
-      background-color: white !important;
-      border-color: #000 !important;
-    }
-
-    .strip-event-name {
-      color: #000 !important;
-    }
-
-    .strip-date {
-      color: #333 !important;
-    }
-  }
-}
-
-/* Inkjet printer optimization */
-@media print and (color-gamut: srgb) {
-  .strip-photo-frame {
-    -webkit-filter: saturate(1.1) contrast(1.05);
-    filter: saturate(1.1) contrast(1.05);
-  }
-}
-
-/* Laser printer optimization */
-@media print and (resolution >= 600dpi) {
-  .strip-photo-frame {
-    image-rendering: -webkit-optimize-contrast;
-    image-rendering: optimize-contrast;
-  }
 }
 
 
