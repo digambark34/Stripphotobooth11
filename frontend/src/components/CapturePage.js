@@ -22,12 +22,12 @@ export default function CapturePage() {
 
 
 
-  // Initialize canvas with template background - 600×1800 pixels at 300 DPI (2×6 inch)
+  // Initialize canvas with template background - 660×2100 pixels at 300 DPI (2.2×7 inch)
   const initializeCanvas = useCallback(() => {
     if (canvasRef.current) {
       const ctx = canvasRef.current.getContext("2d");
-      const width = 600;  // 2 inches × 300 DPI
-      const height = 1800; // 6 inches × 300 DPI
+      const width = 660;   // 2.2 inches × 300 DPI - MATCHES PRINT CSS
+      const height = 2100; // 7 inches × 300 DPI - MATCHES PRINT CSS
 
       canvasRef.current.width = width;
       canvasRef.current.height = height;
@@ -142,13 +142,14 @@ export default function CapturePage() {
 
   // Beautiful frames with borders and stylish event name
   const addBeautifulText = (ctx) => {
-    const canvasWidth = 600;
-    const photoWidth = 500;
-    const photoHeight = 420;
-    const photoX = 50;
+    // MAXIMIZED: Fill almost entire canvas width and height
+    const canvasWidth = 660;   // Actual canvas width
+    const photoWidth = 620;    // BIGGER: Almost full width (20px total margin)
+    const photoHeight = 580;   // BIGGER: Much taller photos
+    const photoX = 20;         // SMALLER margins: 20px each side
 
-    // Photo frame positions
-    const photoPositions = [80, 580, 1080];
+    // Photo frame positions - MAXIMIZED for bigger photos
+    const photoPositions = [40, 660, 1280]; // Closer spacing for bigger photos
 
     // Add beautiful borders around photo frames (without covering photos)
     photoPositions.forEach((photoY) => {
@@ -175,7 +176,7 @@ export default function CapturePage() {
 
     // Custom stylish event name with user settings
     if (settings.eventName) {
-      const textAreaY = 1520; // Start text area after last photo
+      const textAreaY = 1900; // Start text area after bigger photos (1280 + 580 + margin)
       const textStyle = settings.textStyle || {
         fontSize: 60, // Bigger default size
         fontFamily: 'Arial',
@@ -281,8 +282,8 @@ export default function CapturePage() {
         year: 'numeric'
       });
 
-      // Position date at bottom of strip with good spacing from event name
-      const dateY = 1750; // Fixed position near bottom of 1800px strip
+      // Position date at bottom of strip - adjusted for bigger photos
+      const dateY = 2050; // Closer to bottom for bigger photos
       ctx.fillText(dateString, canvasWidth / 2, dateY);
       console.log(`📅 Drew date: ${dateString} at ${dateSize}px, positioned at bottom Y:${dateY}`);
       ctx.restore();
@@ -483,16 +484,16 @@ export default function CapturePage() {
       return;
     }
 
-    // BIGGER Photo frames with borders - elegant and spacious
-    const photoWidth = 500;   // Bigger width for better presence
-    const photoHeight = 420;  // Bigger height but still leaves space for event name
-    const photoX = 50;        // Centered X position with border space
+    // MAXIMIZED Photo frames - fill almost entire strip area
+    const photoWidth = 620;   // BIGGER: Almost full width (matches text function)
+    const photoHeight = 580;  // BIGGER: Much taller photos (matches text function)
+    const photoX = 20;        // SMALLER margins (matches text function)
 
-    // Y positions for bigger photo boxes with space for event name at bottom
+    // Y positions for BIGGER photo boxes - maximized spacing
     const photoPositions = [
-      80,   // First photo box Y position (top)
-      580,  // Second photo box Y position (middle)
-      1080  // Third photo box Y position (bottom) - leaves 200px for event name
+      40,   // First photo box Y position (top) - closer to edge
+      660,  // Second photo box Y position (middle) - tighter spacing
+      1280  // Third photo box Y position (bottom) - leaves space for event name
     ];
 
     const photoY = photoPositions[steps] || photoPositions[0];
@@ -951,8 +952,8 @@ export default function CapturePage() {
           {/* Preview Canvas (hidden) */}
           <canvas
             ref={canvasRef}
-            width="600"
-            height="1800"
+            width="660"
+            height="2100"
             className="hidden"
           />
         </div>

@@ -1,468 +1,65 @@
-/* Print-specific styles for photo strips */
+/* Single Page Print CSS - 2.2×7 inch strips */
 
 @media print {
-  /* Simple print setup */
   @page {
-    size: 2in 6in;
-    margin: 0.1in;
+    size: 2.2in 7in;
+    margin: 0;
   }
 
-  /* Hide everything except print content */
+  html, body {
+    width: 2.2in;
+    height: 7in;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+
   body * {
-    visibility: hidden !important;
+    visibility: hidden;
   }
 
-  /* Show only the print container and its contents */
   .print-container,
-  .print-container * {
-    visibility: visible !important;
-  }
-
-  /* Simple print layout */
-  .print-container {
-    position: absolute !important;
-    left: 0 !important;
-    top: 0 !important;
-    width: 100% !important;
-    height: 100% !important;
-  }
-
-  .print-content {
-    width: 100% !important;
-    height: 100% !important;
-    display: flex !important;
-    justify-content: center !important;
-    align-items: center !important;
-  }
-
-  .print-content img {
-    max-width: 1.8in !important;
-    max-height: 5.8in !important;
-    width: auto !important;
-    height: auto !important;
-  }
-
-  /* Hide preview elements completely during print */
-  .print-preview,
-  .no-print {
-    display: none !important;
-    visibility: hidden !important;
-  }
-
-  /* Position print layout for clean printing */
-  .print-container {
-    position: absolute !important;
-    left: 0 !important;
-    top: 0 !important;
-    width: 100% !important;
-    height: auto !important;
-    max-height: 5.8in !important;
-    background: white !important;
-    overflow: hidden !important;
-    page-break-inside: avoid !important;
-    page-break-after: avoid !important;
-    margin: 0 !important;
-    padding: 0 !important;
-  }
-
-  /* Prevent any extra content from printing */
-  .print-container::after {
-    content: "" !important;
-    display: block !important;
-    page-break-after: avoid !important;
-  }
-
-  /* Force single page only */
-  * {
-    page-break-after: avoid !important;
-    page-break-inside: avoid !important;
-  }
-
-  /* Strip layout container for single strip on 2x6 paper */
-  .strip-print-layout {
-    width: 100% !important;
-    height: auto !important;
-    max-height: 5.8in !important;
-    display: flex !important;
-    flex-direction: column !important;
-    justify-content: flex-start !important;
-    align-items: center !important;
-    background: white !important;
-    page-break-inside: avoid !important;
-    page-break-after: avoid !important;
-    margin: 0 !important;
-    padding: 0.1in 0 0 0 !important;
-    overflow: hidden !important;
-    box-sizing: border-box !important;
-  }
-
-  /* Container for complete photo strip - EXACT same as download */
-  .complete-photo-strip {
-    display: flex !important;
-    flex-direction: column !important;
-    justify-content: center !important;
-    align-items: center !important;
-    width: 100% !important;
-    height: 100% !important;
-    page-break-inside: avoid !important;
-    page-break-after: avoid !important;
-    box-sizing: border-box !important;
-    overflow: hidden !important;
-    margin: 0 !important;
-    padding: 0 !important;
-  }
-
-  /* The complete strip image - exactly as downloaded */
+  .print-container *,
   .strip-image {
-    width: 1.8in !important;      /* Slightly smaller to fit with margins */
-    height: 5.8in !important;     /* Slightly smaller to fit with margins */
-    max-width: 1.8in !important;
-    max-height: 5.8in !important;
-    object-fit: contain !important; /* Maintain aspect ratio */
-    display: block !important;
-    margin: 0.1in auto !important; /* Center with small margin */
-    page-break-inside: avoid !important;
-    page-break-after: avoid !important;
-    -webkit-print-color-adjust: exact !important;
-    color-adjust: exact !important;
-    print-color-adjust: exact !important;
-    image-rendering: -webkit-optimize-contrast !important;
-    image-rendering: crisp-edges !important;
-    border: none !important;
-    outline: none !important;
-    box-shadow: none !important;
-    background: white !important;
-    opacity: 1 !important;
-    visibility: visible !important;
-  }
-
-  /* Single photo strip for 2x6 inch paper */
-  .single-photo-strip {
-    width: 1.7in !important;
-    height: auto !important;
-    max-height: 5.4in !important;
-    background: white !important;
-    border: none !important;
-    border-radius: 0.05in !important;
-    display: flex !important;
-    flex-direction: column !important;
-    padding: 0.05in !important;
-    margin: 0 auto 0 auto !important;
-    page-break-inside: avoid !important;
-    page-break-after: avoid !important;
-    overflow: hidden !important;
-    box-sizing: border-box !important;
-    position: relative !important;
-    top: 0 !important;
-    -webkit-print-color-adjust: exact !important;
-    color-adjust: exact !important;
-    print-color-adjust: exact !important;
-  }
-
-  /* Individual photo frame (3 photos per strip on 2x6 paper) */
-  .strip-photo-frame {
-    width: 100% !important;
-    height: 1.5in !important;
-    background-size: cover !important;
-    background-position: center !important;
-    background-repeat: no-repeat !important;
-    border: 1px solid #ddd !important;
-    border-radius: 0.05in !important;
-    margin-bottom: 0.05in !important;
-    box-sizing: border-box !important;
-    flex-shrink: 0 !important;
-    -webkit-print-color-adjust: exact !important;
-    color-adjust: exact !important;
-    print-color-adjust: exact !important;
-  }
-
-  /* Remove margin from last photo frame */
-  .strip-photo-frame:last-of-type {
-    margin-bottom: 0 !important;
-  }
-
-  /* Text section at bottom (like reference) */
-  .strip-text-section {
-    margin-top: auto !important;
-    text-align: center !important;
-    padding: 0.05in 0 !important;
-    flex-shrink: 0 !important;
-    box-sizing: border-box !important;
-    height: auto !important;
-    max-height: 0.5in !important;
-  }
-
-  .strip-event-name {
-    color: #333 !important;
-    font-size: 10pt !important;
-    font-family: 'Dancing Script', cursive, serif !important;
-    font-weight: 400 !important;
-    text-align: center !important;
-    margin-bottom: 0.02in !important;
-    line-height: 1.1 !important;
-  }
-
-  .strip-date {
-    color: #666 !important;
-    font-size: 7pt !important;
-    font-family: Arial, sans-serif !important;
-    font-weight: normal !important;
-    text-align: center !important;
-    letter-spacing: 0.3px !important;
-    line-height: 1.0 !important;
-  }
-
-  /* Hide screen-only elements */
-  .no-print,
-  .print-preview {
-    display: none !important;
-    visibility: hidden !important;
-  }
-
-  /* Ensure proper image rendering */
-  img {
-    -webkit-print-color-adjust: exact !important;
-    color-adjust: exact !important;
-    print-color-adjust: exact !important;
-    max-width: 100% !important;
-    height: auto !important;
-  }
-
-  /* Force background colors and images to print */
-  .strip-photo-frame,
-  .strip-photo-frame::before,
-  .strip-photo-frame::after,
-  .photo-strip,
-  .strip-header,
-  .strip-footer {
-    -webkit-print-color-adjust: exact !important;
-    color-adjust: exact !important;
-    print-color-adjust: exact !important;
-  }
-
-  /* Prevent page breaks within strips */
-  .photo-strip,
-  .strip-photo-frame {
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
-  }
-
-  /* Optimize for photo printing */
-  .strip-photo-frame {
-    image-rendering: -webkit-optimize-contrast !important;
-    image-rendering: crisp-edges !important;
-  }
-
-  /* CRITICAL: Prevent extra blank pages */
-  body, html {
-    height: 6in !important;
-    max-height: 6in !important;
-    overflow: hidden !important;
+    visibility: visible;
   }
 
   .print-container {
-    height: 6in !important;
-    max-height: 6in !important;
-    overflow: hidden !important;
-  }
-
-  .strip-print-layout {
-    height: 6in !important;
-    max-height: 6in !important;
-    overflow: hidden !important;
-  }
-
-  /* Force single page only */
-  * {
-    page-break-after: avoid !important;
-    page-break-before: avoid !important;
-  }
-}
-
-/* Screen preview styles */
-@media screen {
-  .print-container {
-    position: fixed;
+    width: 2.2in;
+    height: 7in;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background: white;
+    position: absolute;
     top: 0;
     left: 0;
-    width: 100vw;
-    height: 100vh;
-    background: rgba(0, 0, 0, 0.95);
-    z-index: 9999;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    backdrop-filter: blur(5px);
   }
 
-  .print-preview {
-    background: white;
-    padding: 24px;
-    border-radius: 12px;
-    max-width: 90vw;
-    max-height: 90vh;
-    overflow: auto;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-    border: 1px solid #e5e7eb;
+  .strip-image {
+    width: 2.2in;
+    height: 7in;
+    object-fit: fill;
+    display: block;
+    margin: 0;
+    padding: 0;
+    position: absolute;
+    top: 0;
+    left: 0;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 
-  .preview-container {
-    display: flex;
-    justify-content: center;
-    margin: 0 auto;
-    transform: scale(0.8);
-    transform-origin: center;
-  }
-
-  .preview-single-strip {
-    width: 120px !important;
-    height: 360px !important;
-    background: white;
-    border: 2px solid #e5e5e5;
-    border-radius: 8px;
-    display: flex;
-    flex-direction: column;
-    padding: 8px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-  }
-
-  .preview-photo-frame {
-    width: 100%;
-    height: 90px;
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    margin-bottom: 8px;
-  }
-
-  .preview-text-section {
-    margin-top: auto;
-    text-align: center;
-    padding: 8px 0;
-  }
-
-  .preview-event-name {
-    color: #333;
-    font-size: 12px;
-    font-family: 'Dancing Script', cursive, serif;
-    font-weight: 400;
-    text-align: center;
-    margin-bottom: 4px;
-    line-height: 1.1;
-  }
-
-  .preview-date {
-    color: #666;
-    font-size: 9px;
-    font-family: Arial, sans-serif;
-    font-weight: normal;
-    text-align: center;
-    letter-spacing: 0.3px;
-  }
-}
-
-/* High DPI print optimization */
-@media print and (min-resolution: 300dpi) {
-  .strip-photo {
-    image-rendering: -webkit-optimize-contrast;
-    image-rendering: crisp-edges;
-  }
-}
-
-/* Landscape orientation support */
-@media print and (orientation: landscape) {
-  @page {
-    size: A4 landscape;
-    margin: 8mm;
-  }
-  
-  .strip-grid {
-    width: 240mm;
-    height: 170mm;
-  }
-}
-
-/* Color print optimization */
-@media print and (color) {
-  .strip-photo {
-    -webkit-filter: contrast(1.1) saturate(1.1);
-    filter: contrast(1.1) saturate(1.1);
-  }
-}
-
-/* Monochrome print fallback */
-@media print and (monochrome) {
-  .strip-photo {
-    -webkit-filter: grayscale(1) contrast(1.2);
-    filter: grayscale(1) contrast(1.2);
-  }
-}
-
-/* Universal printer compatibility */
-@media print {
-  /* Force all elements to print backgrounds */
+  /* Force single page only */
   * {
-    -webkit-print-color-adjust: exact !important;
-    color-adjust: exact !important;
-    print-color-adjust: exact !important;
-  }
-
-  /* Ensure white background and clean borders print */
-  .single-photo-strip {
-    background-color: white !important;
-    background-image: none !important;
-    border-color: #e5e5e5 !important;
-    border-style: solid !important;
-  }
-
-  /* Ensure text colors print correctly */
-  .strip-date {
-    color: #666 !important;
-    text-shadow: none !important;
-  }
-
-  .strip-event-name {
-    color: #333 !important;
-    text-shadow: none !important;
-  }
-
-  /* Ensure photo borders print */
-  .strip-photo-frame {
-    border-color: #ddd !important;
-    border-style: solid !important;
-  }
-
-  /* High contrast mode support */
-  @media (prefers-contrast: high) {
-    .single-photo-strip {
-      background-color: white !important;
-      border-color: #000 !important;
-    }
-
-    .strip-event-name {
-      color: #000 !important;
-    }
-
-    .strip-date {
-      color: #333 !important;
-    }
+    page-break-after: avoid;
+    page-break-before: avoid;
+    page-break-inside: avoid;
   }
 }
 
-/* Inkjet printer optimization */
-@media print and (color-gamut: srgb) {
-  .strip-photo-frame {
-    -webkit-filter: saturate(1.1) contrast(1.05);
-    filter: saturate(1.1) contrast(1.05);
-  }
-}
-
-/* Laser printer optimization */
-@media print and (resolution >= 600dpi) {
-  .strip-photo-frame {
-    image-rendering: -webkit-optimize-contrast;
-    image-rendering: optimize-contrast;
+@media screen {
+  .print-container {
+    display: none;
   }
 }
