@@ -11,7 +11,7 @@ services:
       - key: PORT
         value: 5000
       - key: MONGO_URI
-        value: mongodb+srv://digambarkothawale05:digambar@cluster0.cyhpvwv.mongodb.net/
+        value: mongodb+srv://digambarkothawale05:digambar@cluster0.cyhpvwv.mongodb.net/strip
       - key: CLOUDINARY_CLOUD_NAME
         value: dfhelz5am
       - key: CLOUDINARY_API_KEY
