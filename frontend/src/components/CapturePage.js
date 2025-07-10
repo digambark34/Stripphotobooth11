@@ -29,11 +29,20 @@ export default function CapturePage() {
       const width = 660;   // 2.2 inches × 300 DPI - MATCHES PRINT CSS
       const height = 1800; // 6 inches × 300 DPI - CORRECT 2×6 inch strip
 
+      // Set canvas dimensions consistently across environments
       canvasRef.current.width = width;
       canvasRef.current.height = height;
 
+      // Force consistent pixel ratio scaling
+      canvasRef.current.style.width = width + 'px';
+      canvasRef.current.style.height = height + 'px';
+
       // Clear entire canvas
       ctx.clearRect(0, 0, width, height);
+
+      // Ensure consistent rendering across environments
+      ctx.imageSmoothingEnabled = false;
+      ctx.textBaseline = 'top';
 
       // Apply template background if available (this is the colorful design)
       if (settings.template) {
@@ -472,7 +481,15 @@ export default function CapturePage() {
     const tempCanvas = document.createElement('canvas');
     tempCanvas.width = photoWidth;   // Use actual photo width (560px - slightly smaller)
     tempCanvas.height = photoHeight; // Use actual photo height (400px - slightly smaller)
+
+    // Ensure consistent scaling across environments
+    tempCanvas.style.width = photoWidth + 'px';
+    tempCanvas.style.height = photoHeight + 'px';
+
     const tempCtx = tempCanvas.getContext('2d');
+
+    // Disable image smoothing for consistent pixel-perfect rendering
+    tempCtx.imageSmoothingEnabled = false;
 
     // Get video dimensions with validation
     const videoWidth = videoRef.current.videoWidth || videoRef.current.clientWidth;
