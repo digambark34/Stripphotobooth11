@@ -38,28 +38,28 @@ A modern, professional photo booth application that creates beautiful 2×6 inch 
 
 ### Installation
 
-1. **Clone the repository**
+1. **Navigate to project directory**
    ```bash
-   git clone https://github.com/yourusername/strip-photobooth.git
    cd strip-photobooth
    ```
 
-2. **Setup Backend**
+2. **Install all dependencies**
    ```bash
-   cd backend
-   npm install
-   cp .env.example .env
-   # Edit .env with your configuration
-   npm start
+   npm run install-all
    ```
 
-3. **Setup Frontend**
+3. **Configure Environment Variables**
+   - Backend: Edit `backend/.env` with your MongoDB and Cloudinary credentials
+   - Frontend: Edit `frontend/.env` to set API URL (default: http://localhost:5000)
+
+4. **Start the Application**
    ```bash
-   cd frontend
-   npm install
-   cp .env.example .env
-   # Edit .env with your backend URL
-   npm start
+   # Start both frontend and backend
+   npm run dev
+
+   # Or start them separately:
+   # Backend: npm run backend
+   # Frontend: npm run frontend
    ```
 
 4. **Access the Application**
@@ -182,22 +182,7 @@ strip-photobooth/
 - Consider the 2×6 inch print format
 - Test templates before events
 
-## 🚀 Deployment
 
-### Frontend Deployment (Netlify/Vercel)
-1. Build the frontend: `npm run build`
-2. Deploy the `build` folder
-3. Update environment variables for production
-
-### Backend Deployment (Heroku/Railway)
-1. Push to your deployment platform
-2. Set environment variables
-3. Ensure MongoDB Atlas allows connections from your server
-
-### Environment Variables for Production
-- Update `REACT_APP_API_BASE_URL` to your backend URL
-- Set `NODE_ENV=production` in backend
-- Use secure values for `JWT_SECRET`
 
 ## 🛠️ Development
 
@@ -235,9 +220,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 If you encounter any issues:
 
-1. Check the [Issues](https://github.com/yourusername/strip-photobooth/issues) page
-2. Create a new issue with detailed information
-3. Include error messages and steps to reproduce
+1. Check the console logs for error messages
+2. Verify MongoDB and Cloudinary connections
+3. Ensure all environment variables are properly set
 
 ## 🙏 Acknowledgments
 

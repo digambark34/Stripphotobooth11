@@ -5,7 +5,10 @@ const cloudinary = require('../config/cloudinary');
 exports.getSettings = async (req, res) => {
   try {
     let settings = await Settings.findById('photobooth-settings');
-    
+
+    // ✅ DEBUG: Log what we found in database
+    console.log('🔍 DEBUG: Settings from database:', JSON.stringify(settings, null, 2));
+
     // If no settings exist, create default settings
     if (!settings) {
       settings = new Settings({
@@ -25,6 +28,9 @@ exports.getSettings = async (req, res) => {
       console.log('✅ Created default settings with text styling');
     }
 
+    // ✅ DEBUG: Log what we're sending back
+    console.log('📤 DEBUG: Sending settings to frontend:', JSON.stringify(settings, null, 2));
+
     res.json(settings);
   } catch (error) {
     console.error('❌ Error fetching settings:', error);
@@ -40,13 +46,20 @@ exports.updateSettings = async (req, res) => {
   try {
     const { eventName, template, textStyle } = req.body;
 
+    // ✅ DEBUG: Log what we received
+    console.log('📥 DEBUG: Update request received:', JSON.stringify({ eventName, template: template ? 'template data present' : 'no template', textStyle }, null, 2));
+
     let settings = await Settings.findById('photobooth-settings');
     if (!settings) {
       settings = new Settings();
     }
 
+    // ✅ DEBUG: Log current settings before update
+    console.log('🔍 DEBUG: Current settings before update:', JSON.stringify(settings, null, 2));
+
     // Update event name
     if (eventName !== undefined) {
+      console.log(`🏷️ DEBUG: Updating eventName from "${settings.eventName}" to "${eventName}"`);
       settings.eventName = eventName;
     }
 

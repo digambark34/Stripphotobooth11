@@ -22,12 +22,12 @@ export default function CapturePage() {
 
 
 
-  // Initialize canvas with template background - 660×2100 pixels at 300 DPI (2.2×7 inch)
+  // Initialize canvas with template background - 660×1800 pixels at 300 DPI (2.2×6 inch)
   const initializeCanvas = useCallback(() => {
     if (canvasRef.current) {
       const ctx = canvasRef.current.getContext("2d");
       const width = 660;   // 2.2 inches × 300 DPI - MATCHES PRINT CSS
-      const height = 2100; // 7 inches × 300 DPI - MATCHES PRINT CSS
+      const height = 1800; // 6 inches × 300 DPI - CORRECT 2×6 inch strip
 
       canvasRef.current.width = width;
       canvasRef.current.height = height;
@@ -140,43 +140,31 @@ export default function CapturePage() {
     }
   }, [settings.template, settings.textStyle, settings.eventName, initializeCanvas]);
 
-  // Beautiful frames with borders and stylish event name
+  // Photo boxes layout with increased width and height
   const addBeautifulText = (ctx) => {
-    // MAXIMIZED: Fill almost entire canvas width and height
     const canvasWidth = 660;   // Actual canvas width
-    const photoWidth = 620;    // BIGGER: Almost full width (20px total margin)
-    const photoHeight = 580;   // BIGGER: Much taller photos
-    const photoX = 20;         // SMALLER margins: 20px each side
+    const photoWidth = 580;    // INCREASED width - expand left and right
+    const photoHeight = 420;   // INCREASED height - capture more vertically
+    const photoX = (canvasWidth - photoWidth) / 2; // Center the wider photo boxes
 
-    // Photo frame positions - MAXIMIZED for bigger photos
-    const photoPositions = [40, 660, 1280]; // Closer spacing for bigger photos
+    // Photo frame positions - first box moved up, better gaps between boxes
+    const photoPositions = [40, 500, 960]; // First box higher, more gap between boxes
 
-    // Add beautiful borders around photo frames (without covering photos)
+    // Add simple white borders around photo frames to match your image
     photoPositions.forEach((photoY) => {
       ctx.save();
 
-      // Draw border as stroke outline instead of filled rectangles
-      // Outer border - gradient stroke
-      const borderGradient = ctx.createLinearGradient(photoX - 6, photoY - 6, photoX + photoWidth + 6, photoY + photoHeight + 6);
-      borderGradient.addColorStop(0, '#8B5CF6'); // Purple
-      borderGradient.addColorStop(0.5, '#EC4899'); // Pink
-      borderGradient.addColorStop(1, '#F59E0B'); // Gold
-
-      ctx.strokeStyle = borderGradient;
-      ctx.lineWidth = 6;
-      ctx.strokeRect(photoX - 3, photoY - 3, photoWidth + 6, photoHeight + 6);
-
-      // Inner border - white stroke
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(photoX - 1, photoY - 1, photoWidth + 2, photoHeight + 2);
+      // Simple white border like in your image
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(photoX - 2, photoY - 2, photoWidth + 4, photoHeight + 4);
 
       ctx.restore();
     });
 
     // Custom stylish event name with user settings
     if (settings.eventName) {
-      const textAreaY = 1900; // Start text area after bigger photos (1280 + 580 + margin)
+      const textAreaY = 1420; // Start text area after photos (960 + 420 + margin)
       const textStyle = settings.textStyle || {
         fontSize: 60, // Bigger default size
         fontFamily: 'Arial',
@@ -484,16 +472,16 @@ export default function CapturePage() {
       return;
     }
 
-    // MAXIMIZED Photo frames - fill almost entire strip area
-    const photoWidth = 620;   // BIGGER: Almost full width (matches text function)
-    const photoHeight = 580;  // BIGGER: Much taller photos (matches text function)
-    const photoX = 20;        // SMALLER margins (matches text function)
+    // Photo frames with increased width and height
+    const photoWidth = 580;    // INCREASED width - expand left and right
+    const photoHeight = 420;   // INCREASED height - capture more vertically
+    const photoX = (660 - photoWidth) / 2; // Center the wider photo boxes
 
-    // Y positions for BIGGER photo boxes - maximized spacing
+    // Y positions - first box moved up, better gaps between boxes
     const photoPositions = [
-      40,   // First photo box Y position (top) - closer to edge
-      660,  // Second photo box Y position (middle) - tighter spacing
-      1280  // Third photo box Y position (bottom) - leaves space for event name
+      40,   // First photo box Y position (moved higher)
+      500,  // Second photo box Y position (more gap from first)
+      960   // Third photo box Y position (more gap from second)
     ];
 
     const photoY = photoPositions[steps] || photoPositions[0];
@@ -501,10 +489,10 @@ export default function CapturePage() {
     // Template background is preserved in all borders and gaps
     // Only the exact photo areas will be filled with captured photos
 
-    // Capture current photo from video - SMART capture with gaps
+    // Capture current photo from video - fit exactly inside larger photo box
     const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = photoWidth;   // Use actual photo width (580px)
-    tempCanvas.height = photoHeight; // Use actual photo height (~588px)
+    tempCanvas.width = photoWidth;   // Use actual photo width (580px - increased)
+    tempCanvas.height = photoHeight; // Use actual photo height (420px - increased)
     const tempCtx = tempCanvas.getContext('2d');
 
     // Get video dimensions with validation
@@ -521,8 +509,8 @@ export default function CapturePage() {
       return;
     }
 
-    // Debug: Log dimensions to verify SMART FILL capture
-    console.log('📸 SMART FILL capture at 300 DPI:', {
+    // Debug: Log dimensions to verify larger photo capture
+    console.log('📸 Photo capture with increased width and height:', {
       videoWidth,
       videoHeight,
       photoWidth,
@@ -531,11 +519,11 @@ export default function CapturePage() {
       photoY,
       step: steps + 1,
       physicalSize: '2×6 inches',
-      captureMode: 'SMART FILL - Complete box fill with template gradient preserved'
+      captureMode: 'Larger photo boxes - expanded width and height'
     });
 
-    // Strategy: SMART FILL - Capture ALL people while completely filling the box
-    // This ensures EVERYONE is visible AND the entire box is filled with photo content
+    // Strategy: Fit photos exactly inside the designated boxes
+    // Photos will be contained within the box boundaries
 
     try {
       if (videoWidth && videoHeight) {
@@ -613,7 +601,7 @@ export default function CapturePage() {
       templateImg.crossOrigin = 'anonymous'; // Enable CORS for Cloudinary images
       templateImg.onload = () => {
         // First: Draw template background to fill entire canvas (preserves gradient)
-        ctx.drawImage(templateImg, 0, 0, 600, 1800);
+        ctx.drawImage(templateImg, 0, 0, 660, 1800);
 
         // Then: Draw all captured photos on top (preserves template in gaps)
         let photosLoaded = 0;
@@ -646,7 +634,7 @@ export default function CapturePage() {
         });
         // Fallback to no template
         try {
-          ctx.clearRect(0, 0, 600, 1800);
+          ctx.clearRect(0, 0, 660, 1800);
           ctx.drawImage(tempCanvas, photoX, photoY);
           addBeautifulText(ctx);
         } catch (error) {
@@ -657,7 +645,7 @@ export default function CapturePage() {
       templateImg.src = settings.template;
     } else {
       // If no template, draw photo and add text on transparent background
-      ctx.clearRect(0, 0, 600, 1800);
+      ctx.clearRect(0, 0, 660, 1800);
       ctx.drawImage(tempCanvas, photoX, photoY);
       addBeautifulText(ctx);
     }
@@ -953,7 +941,7 @@ export default function CapturePage() {
           <canvas
             ref={canvasRef}
             width="660"
-            height="2100"
+            height="1800"
             className="hidden"
           />
         </div>

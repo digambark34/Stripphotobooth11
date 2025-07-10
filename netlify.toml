@@ -1,22 +1,112 @@
+# Netlify configuration for Strip Photobooth Frontend
 [build]
-  base = "frontend"
-  publish = "build"
-  command = "npm run build"
+  # Build command for React app
+  command = "cd frontend && npm ci && npm run build"
+
+  # Directory to publish (React build output)
+  publish = "frontend/build"
+
+  # Base directory for build
+  base = "."
+
+  # Ignore build for certain file changes to prevent unnecessary deploys
+  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF -- README.md DEPLOYMENT.md .gitignore"
 
 [build.environment]
+  # Node.js version
   NODE_VERSION = "18"
+  
+  # NPM version
   NPM_VERSION = "9"
+  
+  # Build environment
+  NODE_ENV = "production"
+  
+  # Disable CI warnings for build
+  CI = "false"
 
+# Redirect rules for React Router
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
 
-[context.production.environment]
-  REACT_APP_API_BASE_URL = "https://stripphotobooth.onrender.com"
+# Headers for security and performance
+[[headers]]
+  for = "/*"
+  [headers.values]
+    # Security headers
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    X-XSS-Protection = "1; mode=block"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    
+    # Performance headers
+    Cache-Control = "public, max-age=31536000, immutable"
 
-[context.deploy-preview.environment]
-  REACT_APP_API_BASE_URL = "https://stripphotobooth.onrender.com"
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    # Don't cache the main HTML file
+    Cache-Control = "public, max-age=0, must-revalidate"
 
-[context.branch-deploy.environment]
-  REACT_APP_API_BASE_URL = "https://stripphotobooth.onrender.com"
+[[headers]]
+  for = "/static/css/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/static/js/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/static/media/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Environment-specific settings
+[context.production]
+  command = "cd frontend && npm ci && npm run build"
+
+[context.deploy-preview]
+  command = "cd frontend && npm ci && npm run build"
+
+[context.branch-deploy]
+  command = "cd frontend && npm ci && npm run build"
+
+# Site settings to maintain consistent URL
+[template.environment]
+  NETLIFY_SITE_NAME = "strip-photobooth"
+
+# Functions (if needed in future)
+[functions]
+  directory = "netlify/functions"
+
+# Plugin configuration
+[[plugins]]
+  package = "@netlify/plugin-lighthouse"
+  
+  [plugins.inputs.thresholds]
+    performance = 0.8
+    accessibility = 0.9
+    best-practices = 0.8
+    seo = 0.8
+
+# Form handling (if needed)
+[build.processing]
+  skip_processing = false
+
+[build.processing.css]
+  bundle = true
+  minify = true
+
+[build.processing.js]
+  bundle = true
+  minify = true
+
+[build.processing.html]
+  pretty_urls = true
+
+[build.processing.images]
+  compress = true

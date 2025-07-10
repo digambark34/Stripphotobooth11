@@ -1,24 +1,84 @@
+# Render configuration for Strip Photobooth Backend
 services:
+  # Backend API Service
   - type: web
-    name: strip-photobooth-backend
+    name: strip-photobooth-api
     env: node
-    buildCommand: cd backend && npm install
-    startCommand: cd backend && npm start
+    region: oregon
     plan: free
+    buildCommand: cd backend && npm ci && npm run build
+    startCommand: cd backend && npm start
+    healthCheckPath: /api/health
+    
+    # Environment variables (set these in Render dashboard)
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
-        value: 5000
-      - key: MONGO_URI
-        value: mongodb+srv://digambarkothawale05:digambar@cluster0.cyhpvwv.mongodb.net/strip
+        value: 10000
+      - key: MONGODB_URI
+        sync: false  # Set in Render dashboard
       - key: CLOUDINARY_CLOUD_NAME
-        value: dfhelz5am
+        sync: false  # Set in Render dashboard
       - key: CLOUDINARY_API_KEY
-        value: 685936334853159
+        sync: false  # Set in Render dashboard
       - key: CLOUDINARY_API_SECRET
-        value: ifOyel7-dC_ZmK9S-rRPKsH7ZnU
-      - key: FRONTEND_URL
-        value: https://68680d4b0e65254ad58b8b9e--strippphotobooth.netlify.app
+        sync: false  # Set in Render dashboard
+      - key: CORS_ORIGIN
+        sync: false  # Set to your Netlify URL
       - key: JWT_SECRET
-        value: your_secure_jwt_secret_change_this_in_production
+        generateValue: true  # Auto-generate secure secret
+      - key: ADMIN_USERNAME
+        value: admin
+      - key: ADMIN_PASSWORD
+        sync: false  # Set in Render dashboard
+    
+    # Auto-deploy settings
+    autoDeploy: true
+    
+    # Build settings
+    buildFilter:
+      paths:
+        - backend/**
+      ignoredPaths:
+        - frontend/**
+        - README.md
+        - .gitignore
+    
+    # Health check settings
+    healthCheckPath: /api/health
+    
+    # Scaling settings
+    numInstances: 1
+    
+    # Disk storage
+    disk:
+      name: data
+      mountPath: /opt/render/project/data
+      sizeGB: 1
+
+# Database (if using Render's MongoDB - optional)
+databases:
+  - name: strip-photobooth-db
+    databaseName: strip_photobooth
+    user: strip_user
+    region: oregon
+    plan: free
+    version: "6.0"
+
+# Static site (alternative to Netlify - optional)
+# - type: static
+#   name: strip-photobooth-frontend
+#   buildCommand: cd frontend && npm ci && npm run build
+#   staticPublishPath: frontend/build
+#   pullRequestPreviewsEnabled: true
+#   
+#   envVars:
+#     - key: REACT_APP_API_URL
+#       value: https://strip-photobooth-api.onrender.com
+#   
+#   buildFilter:
+#     paths:
+#       - frontend/**
+#     ignoredPaths:
+#       - backend/**

@@ -12,6 +12,8 @@ yarn-error.log*
 .env.production.local
 
 # Build outputs
+/frontend/build/
+/backend/dist/
 build/
 dist/
 
@@ -87,3 +89,17 @@ ecosystem.config.js
 # Local development files
 local/
 dev/
+
+# Deployment files (keep templates)
+.env.production
+.env.staging
+
+# Netlify
+.netlify/
+
+# Render
+render.yaml.local
+
+# Package lock files (keep one, comment out the other)
+# package-lock.json
+# yarn.lock

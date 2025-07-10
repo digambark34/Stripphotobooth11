@@ -64,15 +64,23 @@ const PrintStrip = ({ strip, onClose }) => {
                 <div className="bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">1</div>
                 <div>
                   <p className="font-semibold text-gray-800">Set Margins to "None"</p>
-                  <p className="text-sm text-gray-600">In print dialog: More Settings → Margins: None</p>
+                  <p className="text-sm text-gray-600">More Settings → Margins: None (eliminates white borders)</p>
                 </div>
               </div>
-              
+
               <div className="flex items-start space-x-3">
                 <div className="bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">2</div>
                 <div>
                   <p className="font-semibold text-gray-800">Use "Actual Size"</p>
-                  <p className="text-sm text-gray-600">Scale: 100% (Actual Size)</p>
+                  <p className="text-sm text-gray-600">Scale: 100% (prevents white space around strip)</p>
+                </div>
+              </div>
+
+              <div className="flex items-start space-x-3">
+                <div className="bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">3</div>
+                <div>
+                  <p className="font-semibold text-gray-800">Check "Fit to Page"</p>
+                  <p className="text-sm text-gray-600">If available, ensure strip fills entire page</p>
                 </div>
               </div>
             </div>

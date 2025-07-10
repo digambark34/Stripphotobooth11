@@ -1,17 +1,19 @@
-/* Single Page Print CSS - 2.2×7 inch strips */
+/* Single Page Print CSS - 2.2×6 inch strips */
 
 @media print {
   @page {
-    size: 2.2in 7in;
-    margin: 0;
+    size: 2.2in 6in;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
   html, body {
-    width: 2.2in;
-    height: 7in;
-    margin: 0;
-    padding: 0;
+    width: 2.2in !important;
+    height: 6in !important;
+    margin: 0 !important;
+    padding: 0 !important;
     overflow: hidden;
+    box-sizing: border-box;
   }
 
   body * {
@@ -25,36 +27,47 @@
   }
 
   .print-container {
-    width: 2.2in;
-    height: 7in;
-    margin: 0;
-    padding: 0;
+    width: 2.2in !important;
+    height: 6in !important;
+    margin: 0 !important;
+    padding: 0 !important;
     overflow: hidden;
     background: white;
     position: absolute;
-    top: 0;
-    left: 0;
+    top: 0 !important;
+    left: 0 !important;
+    box-sizing: border-box;
   }
 
   .strip-image {
-    width: 2.2in;
-    height: 7in;
+    width: 2.2in !important;
+    height: 6in !important;
     object-fit: fill;
     display: block;
-    margin: 0;
-    padding: 0;
+    margin: 0 !important;
+    padding: 0 !important;
     position: absolute;
-    top: 0;
-    left: 0;
+    top: 0 !important;
+    left: 0 !important;
+    box-sizing: border-box;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+    color-adjust: exact;
   }
 
-  /* Force single page only */
+  /* Force single page only and eliminate all possible white space */
   * {
-    page-break-after: avoid;
-    page-break-before: avoid;
-    page-break-inside: avoid;
+    page-break-after: avoid !important;
+    page-break-before: avoid !important;
+    page-break-inside: avoid !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Additional white space elimination */
+  body, html, div, img {
+    border: none !important;
+    outline: none !important;
   }
 }
 
