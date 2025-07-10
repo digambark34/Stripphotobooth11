@@ -155,7 +155,7 @@ export default function CapturePage() {
     const photoX = (canvasWidth - photoWidth) / 2; // Center the photo boxes
 
     // Photo frame positions - adjusted for better spacing
-    const photoPositions = [50, 510, 920]; // Reduced gap between 2nd and 3rd box
+    const photoPositions = [50, 510, 970]; // Slightly more spacing between boxes
 
     // Add simple white borders around photo frames to match your image
     photoPositions.forEach((photoY) => {
@@ -469,7 +469,7 @@ export default function CapturePage() {
     const photoPositions = [
       50,   // First photo box Y position (slightly lower)
       510,  // Second photo box Y position (more spacing)
-      920   // Third photo box Y position (reduced gap from 2nd box)
+      970   // Third photo box Y position (more spacing)
     ];
 
     const photoY = photoPositions[steps] || photoPositions[0];
