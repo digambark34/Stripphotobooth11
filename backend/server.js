@@ -9,14 +9,15 @@ const healthRoutes = require("./routes/healthRoutes");
 // ✅ Fix: Set strictQuery AFTER mongoose import
 mongoose.set('strictQuery', true);
 
-// ✅ Check MONGO_URI
-if (!process.env.MONGO_URI) {
-  console.error("❌ Error: MONGO_URI not set in .env file");
+// ✅ Check MONGODB_URI
+const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI;
+if (!mongoUri) {
+  console.error("❌ Error: MONGODB_URI not set in .env file");
   process.exit(1);
 }
 
 // ✅ MongoDB Atlas Connection
-mongoose.connect(process.env.MONGO_URI, {
+mongoose.connect(mongoUri, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
   serverSelectionTimeoutMS: 5000,
@@ -45,6 +46,12 @@ app.use(cors({
     // Allow localhost and local development
     if (origin.includes('localhost') || origin.includes('127.0.0.1') || origin.includes('192.168.')) {
       console.log('✅ CORS: Allowing local development origin:', origin);
+      return callback(null, true);
+    }
+
+    // Allow Netlify deployment
+    if (origin === 'https://stripphotobooth11.netlify.app' || origin.includes('netlify.app')) {
+      console.log('✅ CORS: Allowing Netlify origin:', origin);
       return callback(null, true);
     }
 
