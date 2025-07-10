@@ -792,7 +792,7 @@ export default function AdminDashboard() {
           </button>
 
           <button
-            onClick={() => window.open('http://localhost:3000')}
+            onClick={() => window.open('/')}
             className="px-3 sm:px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white rounded-lg sm:rounded-xl font-semibold text-sm sm:text-base transition-all duration-300 transform hover:scale-105 active:scale-95"
           >
             <span className="hidden sm:inline">📷 Go to Camera</span>

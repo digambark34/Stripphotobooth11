@@ -85,9 +85,7 @@ export default function CapturePage() {
         }
       };
 
-      console.log('✅ Backend settings loaded:', backendSettings);
-      console.log('🖼️ Template status:', backendSettings.template ? 'Template found' : 'No template');
-      console.log('🎨 Text style from backend:', backendSettings.textStyle);
+      console.log('✅ Backend settings loaded successfully');
       setSettings(backendSettings);
 
       // Template loaded silently - no notification shown
@@ -140,15 +138,15 @@ export default function CapturePage() {
     }
   }, [settings.template, settings.textStyle, settings.eventName, initializeCanvas]);
 
-  // Photo boxes layout with increased width and height
+  // Photo boxes layout with slightly smaller dimensions for cleaner look
   const addBeautifulText = (ctx) => {
     const canvasWidth = 660;   // Actual canvas width
-    const photoWidth = 580;    // INCREASED width - expand left and right
-    const photoHeight = 420;   // INCREASED height - capture more vertically
-    const photoX = (canvasWidth - photoWidth) / 2; // Center the wider photo boxes
+    const photoWidth = 560;    // Slightly reduced width for neater appearance
+    const photoHeight = 400;   // Slightly reduced height for cleaner spacing
+    const photoX = (canvasWidth - photoWidth) / 2; // Center the photo boxes
 
-    // Photo frame positions - first box moved up, better gaps between boxes
-    const photoPositions = [40, 500, 960]; // First box higher, more gap between boxes
+    // Photo frame positions - adjusted for better spacing
+    const photoPositions = [50, 510, 970]; // Slightly more spacing between boxes
 
     // Add simple white borders around photo frames to match your image
     photoPositions.forEach((photoY) => {
@@ -175,19 +173,14 @@ export default function CapturePage() {
         decorativeLine: false // Remove decorative line
       };
 
-      console.log('🎨 Applying text styling:', textStyle);
-      console.log('📝 Event name:', settings.eventName);
-      console.log('🔧 Current settings object:', settings);
-      console.log('🎯 Font size from settings:', textStyle.fontSize);
-      console.log('🎯 Font family from settings:', textStyle.fontFamily);
-      console.log('🎯 Text color from settings:', textStyle.textColor);
+      // Apply text styling
 
       // Main title with custom styling
       ctx.save();
 
       // Apply solid color for better visibility (no white background)
       ctx.fillStyle = textStyle.textColor;
-      console.log('🎨 Applied solid color:', textStyle.textColor);
+      // Applied solid color
 
       // Smart font sizing - automatically adjust to fit within strip width
       const fontFamily = textStyle.fontFamily || 'Arial';
@@ -216,7 +209,7 @@ export default function CapturePage() {
       // Apply the final font size
       ctx.font = `${fontWeight} ${finalFontSize}px "${fontFamily}", Arial, sans-serif`;
 
-      console.log(`📝 Smart sizing: ${finalFontSize}px (fits in ${maxWidth}px, actual width: ${textWidth.toFixed(0)}px)`);
+      // Smart font sizing applied
 
       // Add text stroke (outline) for better visibility against any background
       ctx.strokeStyle = 'rgba(0, 0, 0, 0.8)'; // Dark outline
@@ -230,7 +223,7 @@ export default function CapturePage() {
         ctx.shadowBlur = Math.max(8, finalFontSize * 0.12);
         ctx.shadowOffsetX = Math.max(4, finalFontSize * 0.06);
         ctx.shadowOffsetY = Math.max(4, finalFontSize * 0.06);
-        console.log('🌟 Applied strong text shadow for visibility');
+        // Applied text shadow for visibility
       } else {
         ctx.shadowColor = 'transparent';
         ctx.shadowBlur = 0;
@@ -241,7 +234,7 @@ export default function CapturePage() {
       // Draw text with outline first, then fill
       ctx.strokeText(settings.eventName, canvasWidth / 2, textAreaY + 60);
       ctx.fillText(settings.eventName, canvasWidth / 2, textAreaY + 60);
-      console.log(`✅ Drew main title with outline: "${settings.eventName}" at ${finalFontSize}px`);
+      // Main title drawn successfully
       ctx.restore();
 
       // No decorative line - cleaner design
@@ -273,7 +266,7 @@ export default function CapturePage() {
       // Position date at bottom of strip - adjusted for bigger photos
       const dateY = 2050; // Closer to bottom for bigger photos
       ctx.fillText(dateString, canvasWidth / 2, dateY);
-      console.log(`📅 Drew date: ${dateString} at ${dateSize}px, positioned at bottom Y:${dateY}`);
+      // Date drawn successfully
       ctx.restore();
     }
   };
@@ -309,14 +302,7 @@ export default function CapturePage() {
         // Log actual video resolution and display size
         videoRef.current.onloadedmetadata = () => {
           const video = videoRef.current;
-          console.log(`📹 Video Details:`, {
-            resolution: `${video.videoWidth}×${video.videoHeight}`,
-            displaySize: `${video.clientWidth}×${video.clientHeight}`,
-            screenSize: `${window.innerWidth}×${window.innerHeight}`,
-            viewportHeight: `${window.innerHeight}px`,
-            cameraHeightVH: `${(video.clientHeight / window.innerHeight * 100).toFixed(1)}vh`,
-            facingMode: facingMode
-          });
+          // Video details logged
         };
       }
     } catch (error) {
@@ -424,14 +410,7 @@ export default function CapturePage() {
                    !video.paused &&
                    !video.ended;
 
-    console.log('📹 Video ready check:', {
-      readyState: video.readyState,
-      videoWidth: video.videoWidth,
-      videoHeight: video.videoHeight,
-      paused: video.paused,
-      ended: video.ended,
-      isReady
-    });
+    // Video ready check performed
 
     return isReady;
   }, []);
@@ -472,16 +451,16 @@ export default function CapturePage() {
       return;
     }
 
-    // Photo frames with increased width and height
-    const photoWidth = 580;    // INCREASED width - expand left and right
-    const photoHeight = 420;   // INCREASED height - capture more vertically
-    const photoX = (660 - photoWidth) / 2; // Center the wider photo boxes
+    // Photo frames with slightly smaller dimensions for cleaner look
+    const photoWidth = 560;    // Slightly reduced width for neater appearance
+    const photoHeight = 400;   // Slightly reduced height for cleaner spacing
+    const photoX = (660 - photoWidth) / 2; // Center the photo boxes
 
-    // Y positions - first box moved up, better gaps between boxes
+    // Y positions - adjusted for better spacing
     const photoPositions = [
-      40,   // First photo box Y position (moved higher)
-      500,  // Second photo box Y position (more gap from first)
-      960   // Third photo box Y position (more gap from second)
+      50,   // First photo box Y position (slightly lower)
+      510,  // Second photo box Y position (more spacing)
+      970   // Third photo box Y position (more spacing)
     ];
 
     const photoY = photoPositions[steps] || photoPositions[0];
@@ -489,10 +468,10 @@ export default function CapturePage() {
     // Template background is preserved in all borders and gaps
     // Only the exact photo areas will be filled with captured photos
 
-    // Capture current photo from video - fit exactly inside larger photo box
+    // Capture current photo from video - fit exactly inside photo box
     const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = photoWidth;   // Use actual photo width (580px - increased)
-    tempCanvas.height = photoHeight; // Use actual photo height (420px - increased)
+    tempCanvas.width = photoWidth;   // Use actual photo width (560px - slightly smaller)
+    tempCanvas.height = photoHeight; // Use actual photo height (400px - slightly smaller)
     const tempCtx = tempCanvas.getContext('2d');
 
     // Get video dimensions with validation
@@ -509,18 +488,7 @@ export default function CapturePage() {
       return;
     }
 
-    // Debug: Log dimensions to verify larger photo capture
-    console.log('📸 Photo capture with increased width and height:', {
-      videoWidth,
-      videoHeight,
-      photoWidth,
-      photoHeight,
-      photoX,
-      photoY,
-      step: steps + 1,
-      physicalSize: '2×6 inches',
-      captureMode: 'Larger photo boxes - expanded width and height'
-    });
+    // Photo capture dimensions calculated
 
     // Strategy: Fit photos exactly inside the designated boxes
     // Photos will be contained within the box boundaries
@@ -557,14 +525,14 @@ export default function CapturePage() {
           0, 0, photoWidth, photoHeight // Destination: Fill entire box completely
         );
 
-        console.log(`📸 SMART STRETCH mode: Box filled completely with photo content - sourceArea: ${sourceWidth.toFixed(0)}×${sourceHeight.toFixed(0)} → ${photoWidth}×${photoHeight} box`);
+        // Smart stretch mode applied
       } else {
         // Fallback: Direct capture if dimensions not available
         tempCtx.drawImage(
           videoRef.current,
           0, 0, photoWidth, photoHeight
         );
-        console.log('📸 Fallback mode: Direct video capture');
+        // Fallback capture mode
       }
     } catch (error) {
       console.error('❌ Error capturing photo from video:', error);
@@ -650,8 +618,7 @@ export default function CapturePage() {
       addBeautifulText(ctx);
     }
 
-    const boxNames = ['FIRST BOX (TOP)', 'SECOND BOX (MIDDLE)', 'THIRD BOX (BOTTOM)'];
-    console.log(`✅ Photo ${steps + 1} placed in ${boxNames[steps]} at position: X=${photoX}px, Y=${photoY}px`);
+    // Photo placed in designated box
 
     // Show "Next Photo" message after capture (except for the last photo)
     if (steps < 2) {

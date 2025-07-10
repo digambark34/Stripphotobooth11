@@ -83,11 +83,6 @@ app.use((req, _res, next) => {
   next();
 });
 
-// ✅ Health check endpoint
-app.get('/health', (_req, res) => {
-  res.json({ status: 'OK', timestamp: new Date().toISOString() });
-});
-
 // ✅ API Routes
 app.use("/api/health", healthRoutes);
 app.use("/api/strips", stripRoutes);
