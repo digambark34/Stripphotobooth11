@@ -871,9 +871,11 @@ export default function CapturePage() {
                 playsInline
                 className="w-full rounded-lg sm:rounded-xl md:rounded-2xl shadow-2xl border-2 sm:border-3 md:border-4 border-white/20 group-hover:border-white/30 transition-all duration-300 mobile-camera-video"
                 style={{
-                  objectFit: 'contain', // Keep proportions, no distortion
                   width: '100%',
-                  height: 'auto'
+                  aspectRatio: '11 / 30', // Match strip ratio 660x1800
+                  objectFit: 'contain',
+                  transform: 'scale(1.1)',
+                  transformOrigin: 'top center'
                 }}
               />
 
