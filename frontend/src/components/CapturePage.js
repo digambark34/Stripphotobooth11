@@ -595,8 +595,8 @@ export default function CapturePage() {
 
     try {
       if (videoWidth && videoHeight) {
-        // COVER BOX COMPLETELY: Photo covers entire box without stretching
-        // Maintains photo proportions but fills whole box (like CSS object-fit: cover)
+        // SMART CROP STRATEGY: Crop only bottom part to keep face visible
+        // This ensures heads/faces are always visible while filling the box
 
         const videoAspect = videoWidth / videoHeight;
         const boxAspect = photoWidth / photoHeight;
@@ -608,19 +608,20 @@ export default function CapturePage() {
           sourceWidth = videoHeight * boxAspect;
           sourceX = (videoWidth - sourceWidth) / 2;
         } else {
-          // Video is taller - crop top/bottom to fit box width
+          // Video is taller - crop ONLY BOTTOM to fit box width (keep top/face visible)
           sourceHeight = videoWidth / boxAspect;
-          sourceY = (videoHeight - sourceHeight) / 2;
+          sourceY = 0; // Start from top (keep face visible)
+          // sourceHeight will be less than videoHeight, cropping bottom only
         }
 
         // Draw cropped video to fill entire box without stretching
         tempCtx.drawImage(
           videoRef.current,
-          sourceX, sourceY, sourceWidth, sourceHeight, // Source: Cropped portion
+          sourceX, sourceY, sourceWidth, sourceHeight, // Source: Cropped portion (bottom cropped)
           0, 0, photoWidth, photoHeight // Destination: Fill entire box
         );
 
-        console.log(`📸 Photo captured covering entire box - Video: ${videoWidth}x${videoHeight}, Cropped: ${sourceWidth}x${sourceHeight}, Box: ${photoWidth}x${photoHeight}`);
+        console.log(`📸 Photo captured with smart crop (bottom only) - Video: ${videoWidth}x${videoHeight}, Cropped: ${sourceWidth}x${sourceHeight}, Box: ${photoWidth}x${photoHeight}`);
       } else {
         // Fallback: Direct stretch if dimensions not available
         tempCtx.drawImage(
@@ -863,18 +864,21 @@ export default function CapturePage() {
               </div>
             </div>
 
-            <div className="relative group">
+            <div className="relative group flex justify-center items-start overflow-hidden">
               <video
                 ref={videoRef}
                 autoPlay
                 playsInline
                 className="w-full rounded-lg sm:rounded-xl md:rounded-2xl shadow-2xl border-2 sm:border-3 md:border-4 border-white/20 group-hover:border-white/30 transition-all duration-300 mobile-camera-video"
                 style={{
-                  objectFit: 'cover',
+                  objectFit: 'contain', // Keep proportions, no distortion
                   width: '100%',
                   height: 'auto'
                 }}
               />
+
+              {/* Frame overlay to help users stay in frame */}
+              <div className="absolute inset-4 border-2 border-white/30 rounded-lg pointer-events-none"></div>
 
               {/* Overlay gradient */}
               <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent rounded-2xl pointer-events-none"></div>
