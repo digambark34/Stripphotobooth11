@@ -147,12 +147,12 @@ export default function CapturePage() {
     }
   }, [settings.template, settings.textStyle, settings.eventName, initializeCanvas]);
 
-  // Photo boxes layout with increased width and height
+  // Photo boxes layout with optimized dimensions
   const addBeautifulText = (ctx) => {
     const canvasWidth = 660;   // Actual canvas width
-    const photoWidth = 580;    // INCREASED width - expand left and right
-    const photoHeight = 420;   // INCREASED height - capture more vertically
-    const photoX = (canvasWidth - photoWidth) / 2; // Center the wider photo boxes
+    const photoWidth = 540;    // Slightly decreased width for better proportions
+    const photoHeight = 390;   // Slightly decreased height for better proportions
+    const photoX = (canvasWidth - photoWidth) / 2; // Center the photo boxes
 
     // Photo frame positions - first box moved up, better gaps between boxes
     const photoPositions = [40, 500, 960]; // First box higher, more gap between boxes
@@ -520,10 +520,10 @@ export default function CapturePage() {
       return;
     }
 
-    // Photo frames with increased width and height
-    const photoWidth = 580;    // INCREASED width - expand left and right
-    const photoHeight = 420;   // INCREASED height - capture more vertically
-    const photoX = (660 - photoWidth) / 2; // Center the wider photo boxes
+    // Photo frames - MUST match addBeautifulText dimensions exactly
+    const photoWidth = 540;    // Match white box width exactly
+    const photoHeight = 390;   // Match white box height exactly
+    const photoX = (660 - photoWidth) / 2; // Center the photo boxes
 
     // Y positions - first box moved up, better gaps between boxes
     const photoPositions = [
@@ -539,8 +539,8 @@ export default function CapturePage() {
 
     // Capture current photo from video - fit exactly inside photo box
     const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = photoWidth;   // Use actual photo width (580px - increased)
-    tempCanvas.height = photoHeight; // Use actual photo height (420px - increased)
+    tempCanvas.width = photoWidth;   // Use exact photo width (540px - matches white box)
+    tempCanvas.height = photoHeight; // Use exact photo height (390px - matches white box)
 
     // Ensure consistent scaling across environments
     tempCanvas.style.width = photoWidth + 'px';
@@ -649,7 +649,8 @@ export default function CapturePage() {
           const photoImg = new Image();
           photoImg.crossOrigin = 'anonymous'; // Enable CORS for photo data URLs
           photoImg.onload = () => {
-            ctx.drawImage(photoImg, photo.x, photo.y);
+            // Draw photo exactly within box boundaries
+            ctx.drawImage(photoImg, 0, 0, photoWidth, photoHeight, photo.x, photo.y, photoWidth, photoHeight);
             photosLoaded++;
 
             // After all photos are loaded, add beautiful text
@@ -675,7 +676,8 @@ export default function CapturePage() {
         // Fallback to no template
         try {
           ctx.clearRect(0, 0, 660, 1800);
-          ctx.drawImage(tempCanvas, photoX, photoY);
+          // Draw photo exactly within box boundaries
+          ctx.drawImage(tempCanvas, 0, 0, photoWidth, photoHeight, photoX, photoY, photoWidth, photoHeight);
           addBeautifulText(ctx);
         } catch (error) {
           console.error('❌ Error in template fallback:', error);
@@ -686,7 +688,8 @@ export default function CapturePage() {
     } else {
       // If no template, draw photo and add text on transparent background
       ctx.clearRect(0, 0, 660, 1800);
-      ctx.drawImage(tempCanvas, photoX, photoY);
+      // Draw photo exactly within box boundaries
+      ctx.drawImage(tempCanvas, 0, 0, photoWidth, photoHeight, photoX, photoY, photoWidth, photoHeight);
       addBeautifulText(ctx);
     }
 
