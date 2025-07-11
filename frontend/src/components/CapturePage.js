@@ -512,44 +512,39 @@ export default function CapturePage() {
 
     try {
       if (videoWidth && videoHeight) {
-        // SMART STRETCH FILL: Stretch video to fill entire box while keeping all people visible
-        // This approach fills the box completely with photo content (no backgrounds)
+        // COVER MODE: Scale video to completely fill the photo box (like CSS object-fit: cover)
+        // This ensures the photo box is completely filled with no empty spaces
 
-        // Calculate aspect ratios
         const videoAspect = videoWidth / videoHeight;
         const boxAspect = photoWidth / photoHeight;
 
         let sourceX = 0, sourceY = 0, sourceWidth = videoWidth, sourceHeight = videoHeight;
 
         if (videoAspect > boxAspect) {
-          // Video is wider than box - adjust width to fit all people
-          // Keep full height, crop minimal width from sides
-          const newWidth = videoHeight * boxAspect;
-          sourceX = (videoWidth - newWidth) / 2; // Center crop
-          sourceWidth = newWidth;
+          // Video is wider - crop from sides to fit height
+          sourceWidth = videoHeight * boxAspect;
+          sourceX = (videoWidth - sourceWidth) / 2;
         } else {
-          // Video is taller than box - adjust height to fit all people
-          // Keep full width, crop minimal height from top/bottom
-          const newHeight = videoWidth / boxAspect;
-          sourceY = (videoHeight - newHeight) / 2; // Center crop
-          sourceHeight = newHeight;
+          // Video is taller - crop from top/bottom to fit width
+          sourceHeight = videoWidth / boxAspect;
+          sourceY = (videoHeight - sourceHeight) / 2;
         }
 
-        // Draw the intelligently cropped video to fill entire box
+        // Draw video to completely fill the photo box
         tempCtx.drawImage(
           videoRef.current,
-          sourceX, sourceY, sourceWidth, sourceHeight, // Source: Smart crop to preserve people
-          0, 0, photoWidth, photoHeight // Destination: Fill entire box completely
+          sourceX, sourceY, sourceWidth, sourceHeight, // Source: Cropped to fit
+          0, 0, photoWidth, photoHeight // Destination: Fill entire box
         );
 
-        // Smart stretch mode applied
+        console.log(`📸 Photo captured with cover mode - Video: ${videoWidth}x${videoHeight}, Box: ${photoWidth}x${photoHeight}`);
       } else {
-        // Fallback: Direct capture if dimensions not available
+        // Fallback: Direct stretch if dimensions not available
         tempCtx.drawImage(
           videoRef.current,
           0, 0, photoWidth, photoHeight
         );
-        // Fallback capture mode
+        console.log('📸 Photo captured with fallback stretch mode');
       }
     } catch (error) {
       console.error('❌ Error capturing photo from video:', error);
@@ -786,11 +781,9 @@ export default function CapturePage() {
                 ref={videoRef}
                 autoPlay
                 playsInline
-                className="w-full aspect-video rounded-lg sm:rounded-xl md:rounded-2xl shadow-2xl border-2 sm:border-3 md:border-4 border-white/20 group-hover:border-white/30 transition-all duration-300 mobile-camera-video"
+                className="w-full rounded-lg sm:rounded-xl md:rounded-2xl shadow-2xl border-2 sm:border-3 md:border-4 border-white/20 group-hover:border-white/30 transition-all duration-300 mobile-camera-video"
                 style={{
                   objectFit: 'cover',
-                  minHeight: '65vh',
-                  maxHeight: '80vh',
                   width: '100%',
                   height: 'auto'
                 }}

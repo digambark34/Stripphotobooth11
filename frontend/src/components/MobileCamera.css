@@ -16,7 +16,7 @@
     object-fit: cover !important;
     width: 100% !important;
     border-radius: 8px !important;
-    aspect-ratio: 16/9 !important;
+    /* Remove forced aspect ratio to maintain natural video proportions */
   }
   
   .mobile-header {
@@ -90,7 +90,7 @@
 /* Android specific optimizations */
 @media (max-width: 640px) and (-webkit-min-device-pixel-ratio: 2) {
   .mobile-camera-video {
-    transform: scale(1.01); /* Slight scale to fill any gaps */
+    /* Remove transform scale to maintain consistent capture dimensions */
   }
 }
 
