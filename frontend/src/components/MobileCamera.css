@@ -13,10 +13,11 @@
   .mobile-camera-video {
     min-height: 65vh !important;
     max-height: 75vh !important;
-    object-fit: cover !important;
+    object-fit: contain !important; /* Changed from cover to contain to force landscape */
     width: 100% !important;
     border-radius: 8px !important;
-    /* Remove forced aspect ratio to maintain natural video proportions */
+    /* Force landscape aspect ratio for consistent capture */
+    aspect-ratio: 16/9 !important;
   }
   
   .mobile-header {
@@ -53,6 +54,8 @@
   .mobile-camera-video {
     min-height: 40vh !important;
     max-height: 55vh !important;
+    object-fit: contain !important;
+    aspect-ratio: 16/9 !important;
   }
 }
 
@@ -61,6 +64,8 @@
   .mobile-camera-video {
     min-height: 80vh !important;
     max-height: 90vh !important;
+    object-fit: contain !important; /* Maintain landscape aspect */
+    aspect-ratio: 16/9 !important; /* Force landscape ratio */
   }
 
   .mobile-header {
@@ -84,13 +89,17 @@
     min-height: 70vh !important;
     max-height: 80vh !important;
     border-radius: 6px !important;
+    object-fit: contain !important;
+    aspect-ratio: 16/9 !important;
   }
 }
 
 /* Android specific optimizations */
 @media (max-width: 640px) and (-webkit-min-device-pixel-ratio: 2) {
   .mobile-camera-video {
-    /* Remove transform scale to maintain consistent capture dimensions */
+    /* Maintain landscape aspect ratio on high DPI Android devices */
+    object-fit: contain !important;
+    aspect-ratio: 16/9 !important;
   }
 }
 
@@ -105,6 +114,8 @@
   .mobile-camera-video {
     min-height: 75vh !important;
     max-height: 85vh !important;
+    object-fit: contain !important;
+    aspect-ratio: 16/9 !important;
   }
 
   .mobile-button {

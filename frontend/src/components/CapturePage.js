@@ -280,6 +280,49 @@ export default function CapturePage() {
     }
   };
 
+  // Force landscape orientation on mobile devices
+  useEffect(() => {
+    const forceLandscape = () => {
+      if (screen.orientation && screen.orientation.lock) {
+        try {
+          const lockPromise = screen.orientation.lock('landscape');
+          if (lockPromise && typeof lockPromise.catch === 'function') {
+            lockPromise.catch(err => {
+              console.log('Screen orientation lock not supported or failed:', err);
+            });
+          }
+        } catch (error) {
+          console.log('Screen orientation lock not supported or failed:', error);
+        }
+      }
+    };
+
+    // Try to force landscape when component mounts
+    forceLandscape();
+
+    // Also try when orientation changes
+    const handleOrientationChange = () => {
+      setTimeout(forceLandscape, 100);
+    };
+
+    window.addEventListener('orientationchange', handleOrientationChange);
+
+    return () => {
+      window.removeEventListener('orientationchange', handleOrientationChange);
+      // Unlock orientation when leaving
+      if (screen.orientation && screen.orientation.unlock) {
+        try {
+          const unlockPromise = screen.orientation.unlock();
+          if (unlockPromise && typeof unlockPromise.catch === 'function') {
+            unlockPromise.catch(() => {});
+          }
+        } catch (error) {
+          // Ignore unlock errors
+        }
+      }
+    };
+  }, []);
+
   // Camera initialization with higher resolution and camera switching support
   const initializeCamera = useCallback(async (facingMode = currentCamera) => {
     try {
@@ -291,27 +334,44 @@ export default function CapturePage() {
 
       console.log(`📹 Initializing camera with facing mode: ${facingMode}`);
 
-      // High-resolution constraints optimized for mobile
+      // Force landscape mode for consistent capture on mobile and desktop
       const constraints = {
         video: {
-          width: { ideal: 2560, min: 1920 }, // Higher resolution for mobile
-          height: { ideal: 1440, min: 1080 },
-          facingMode: { ideal: facingMode }, // Use ideal instead of exact for better compatibility
+          width: { ideal: 1920, min: 1280 },  // Much wider resolution
+          height: { ideal: 1080, min: 720 },  // Standard height
+          facingMode: { ideal: facingMode },
           frameRate: { ideal: 30, min: 15 },
-          aspectRatio: { ideal: 16/9 }
+          aspectRatio: { exact: 16/9 } // Force exact 16:9 landscape ratio
         }
       };
 
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+      } catch (error) {
+        // Fallback: Try without exact aspect ratio if it fails
+        console.warn("Exact aspect ratio failed, trying fallback constraints:", error);
+        const fallbackConstraints = {
+          video: {
+            width: { ideal: 1920, min: 1280 },
+            height: { ideal: 1080, min: 720 },
+            facingMode: { ideal: facingMode },
+            frameRate: { ideal: 30, min: 15 }
+          }
+        };
+        stream = await navigator.mediaDevices.getUserMedia(fallbackConstraints);
+      }
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         console.log(`✅ Camera initialized successfully with ${facingMode} camera`);
 
-        // Log actual video resolution and display size
+        // Log actual video resolution and display size for debugging
         videoRef.current.onloadedmetadata = () => {
           const video = videoRef.current;
-          // Video details logged
+          const videoAspect = video.videoWidth / video.videoHeight;
+          const isLandscape = videoAspect >= 1.3;
+          console.log(`📹 Video loaded - Resolution: ${video.videoWidth}x${video.videoHeight}, Aspect: ${videoAspect.toFixed(2)}, ${isLandscape ? 'Landscape ✅' : 'Portrait ❌'}`);
         };
       }
     } catch (error) {
@@ -512,20 +572,20 @@ export default function CapturePage() {
 
     try {
       if (videoWidth && videoHeight) {
-        // COVER MODE: Scale video to completely fill the photo box (like CSS object-fit: cover)
-        // This ensures the photo box is completely filled with no empty spaces
+        // LANDSCAPE COVER MODE: Video is forced to landscape, same behavior on mobile and desktop
+        // This ensures consistent photo capture across all devices
 
         const videoAspect = videoWidth / videoHeight;
-        const boxAspect = photoWidth / photoHeight;
+        const boxAspect = photoWidth / photoHeight; // 580/420 = 1.38 (landscape box)
 
         let sourceX = 0, sourceY = 0, sourceWidth = videoWidth, sourceHeight = videoHeight;
 
         if (videoAspect > boxAspect) {
-          // Video is wider - crop from sides to fit height
+          // Video is wider than box - crop from sides
           sourceWidth = videoHeight * boxAspect;
           sourceX = (videoWidth - sourceWidth) / 2;
         } else {
-          // Video is taller - crop from top/bottom to fit width
+          // Video is taller than box - crop from top/bottom
           sourceHeight = videoWidth / boxAspect;
           sourceY = (videoHeight - sourceHeight) / 2;
         }
@@ -537,7 +597,7 @@ export default function CapturePage() {
           0, 0, photoWidth, photoHeight // Destination: Fill entire box
         );
 
-        console.log(`📸 Photo captured with cover mode - Video: ${videoWidth}x${videoHeight}, Box: ${photoWidth}x${photoHeight}`);
+        console.log(`📸 Photo captured in landscape mode - Video: ${videoWidth}x${videoHeight}, Box: ${photoWidth}x${photoHeight}`);
       } else {
         // Fallback: Direct stretch if dimensions not available
         tempCtx.drawImage(
