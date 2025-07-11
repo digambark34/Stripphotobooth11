@@ -572,36 +572,32 @@ export default function CapturePage() {
 
     try {
       if (videoWidth && videoHeight) {
-        // NO CROP MODE: Capture entire video and fit it in the box without cropping
-        // This preserves the full video content as requested by client
+        // COVER BOX COMPLETELY: Photo covers entire box without stretching
+        // Maintains photo proportions but fills whole box (like CSS object-fit: cover)
 
         const videoAspect = videoWidth / videoHeight;
         const boxAspect = photoWidth / photoHeight;
 
-        let destX = 0, destY = 0, destWidth = photoWidth, destHeight = photoHeight;
+        let sourceX = 0, sourceY = 0, sourceWidth = videoWidth, sourceHeight = videoHeight;
 
         if (videoAspect > boxAspect) {
-          // Video is wider - fit width, center vertically with black bars
-          destHeight = photoWidth / videoAspect;
-          destY = (photoHeight - destHeight) / 2;
+          // Video is wider - crop sides to fit box height
+          sourceWidth = videoHeight * boxAspect;
+          sourceX = (videoWidth - sourceWidth) / 2;
         } else {
-          // Video is taller - fit height, center horizontally with black bars
-          destWidth = photoHeight * videoAspect;
-          destX = (photoWidth - destWidth) / 2;
+          // Video is taller - crop top/bottom to fit box width
+          sourceHeight = videoWidth / boxAspect;
+          sourceY = (videoHeight - sourceHeight) / 2;
         }
 
-        // Clear the box with black background first
-        tempCtx.fillStyle = '#000000';
-        tempCtx.fillRect(0, 0, photoWidth, photoHeight);
-
-        // Draw entire video without any cropping - fit to box with letterboxing
+        // Draw cropped video to fill entire box without stretching
         tempCtx.drawImage(
           videoRef.current,
-          0, 0, videoWidth, videoHeight, // Source: Entire video (no cropping)
-          destX, destY, destWidth, destHeight // Destination: Fitted in box
+          sourceX, sourceY, sourceWidth, sourceHeight, // Source: Cropped portion
+          0, 0, photoWidth, photoHeight // Destination: Fill entire box
         );
 
-        console.log(`📸 Photo captured without cropping - Video: ${videoWidth}x${videoHeight}, Fitted: ${destWidth}x${destHeight}`);
+        console.log(`📸 Photo captured covering entire box - Video: ${videoWidth}x${videoHeight}, Cropped: ${sourceWidth}x${sourceHeight}, Box: ${photoWidth}x${photoHeight}`);
       } else {
         // Fallback: Direct stretch if dimensions not available
         tempCtx.drawImage(
