@@ -366,6 +366,18 @@ export default function CapturePage() {
         videoRef.current.srcObject = stream;
         console.log(`✅ Camera initialized successfully with ${facingMode} camera`);
 
+        // Wait for video to be fully ready before allowing captures
+        await new Promise((resolve) => {
+          const handleLoadedData = () => {
+            videoRef.current.removeEventListener('loadeddata', handleLoadedData);
+            resolve();
+          };
+          videoRef.current.addEventListener('loadeddata', handleLoadedData);
+        });
+
+        // Additional delay to ensure video is fully ready for capture
+        await new Promise(resolve => setTimeout(resolve, 800));
+
         // Log actual video resolution and display size for debugging
         videoRef.current.onloadedmetadata = () => {
           const video = videoRef.current;
@@ -510,6 +522,17 @@ export default function CapturePage() {
       setNotification({
         type: "error",
         message: "Camera not ready. Please wait and try again."
+      });
+      return;
+    }
+
+    // Extra check: Ensure video is fully loaded and has valid dimensions
+    const video = videoRef.current;
+    if (!video.videoWidth || !video.videoHeight || video.readyState < 2) {
+      console.error('❌ Video not fully loaded or switching cameras');
+      setNotification({
+        type: "error",
+        message: "Camera is switching. Please wait a moment and try again."
       });
       return;
     }
