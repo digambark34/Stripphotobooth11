@@ -334,14 +334,14 @@ export default function CapturePage() {
 
       console.log(`📹 Initializing camera with facing mode: ${facingMode}`);
 
-      // Force landscape mode for consistent capture on mobile and desktop
+      // Maximum field of view for multiple people
       const constraints = {
         video: {
-          width: { ideal: 1920, min: 1280 },  // Much wider resolution
-          height: { ideal: 1080, min: 720 },  // Standard height
+          width: { ideal: 1920, min: 1280 },  // High resolution
+          height: { ideal: 1440, min: 960 },  // Taller for more people
           facingMode: { ideal: facingMode },
-          frameRate: { ideal: 30, min: 15 },
-          aspectRatio: { exact: 16/9 } // Force exact 16:9 landscape ratio
+          frameRate: { ideal: 30, min: 15 }
+          // No aspect ratio constraints - use camera's natural view
         }
       };
 
@@ -354,7 +354,7 @@ export default function CapturePage() {
         const fallbackConstraints = {
           video: {
             width: { ideal: 1920, min: 1280 },
-            height: { ideal: 1080, min: 720 },
+            height: { ideal: 1440, min: 960 },
             facingMode: { ideal: facingMode },
             frameRate: { ideal: 30, min: 15 }
           }
@@ -572,32 +572,36 @@ export default function CapturePage() {
 
     try {
       if (videoWidth && videoHeight) {
-        // LANDSCAPE COVER MODE: Video is forced to landscape, same behavior on mobile and desktop
-        // This ensures consistent photo capture across all devices
+        // NO CROP MODE: Capture entire video and fit it in the box without cropping
+        // This preserves the full video content as requested by client
 
         const videoAspect = videoWidth / videoHeight;
-        const boxAspect = photoWidth / photoHeight; // 580/420 = 1.38 (landscape box)
+        const boxAspect = photoWidth / photoHeight;
 
-        let sourceX = 0, sourceY = 0, sourceWidth = videoWidth, sourceHeight = videoHeight;
+        let destX = 0, destY = 0, destWidth = photoWidth, destHeight = photoHeight;
 
         if (videoAspect > boxAspect) {
-          // Video is wider than box - crop from sides
-          sourceWidth = videoHeight * boxAspect;
-          sourceX = (videoWidth - sourceWidth) / 2;
+          // Video is wider - fit width, center vertically with black bars
+          destHeight = photoWidth / videoAspect;
+          destY = (photoHeight - destHeight) / 2;
         } else {
-          // Video is taller than box - crop from top/bottom
-          sourceHeight = videoWidth / boxAspect;
-          sourceY = (videoHeight - sourceHeight) / 2;
+          // Video is taller - fit height, center horizontally with black bars
+          destWidth = photoHeight * videoAspect;
+          destX = (photoWidth - destWidth) / 2;
         }
 
-        // Draw video to completely fill the photo box
+        // Clear the box with black background first
+        tempCtx.fillStyle = '#000000';
+        tempCtx.fillRect(0, 0, photoWidth, photoHeight);
+
+        // Draw entire video without any cropping - fit to box with letterboxing
         tempCtx.drawImage(
           videoRef.current,
-          sourceX, sourceY, sourceWidth, sourceHeight, // Source: Cropped to fit
-          0, 0, photoWidth, photoHeight // Destination: Fill entire box
+          0, 0, videoWidth, videoHeight, // Source: Entire video (no cropping)
+          destX, destY, destWidth, destHeight // Destination: Fitted in box
         );
 
-        console.log(`📸 Photo captured in landscape mode - Video: ${videoWidth}x${videoHeight}, Box: ${photoWidth}x${photoHeight}`);
+        console.log(`📸 Photo captured without cropping - Video: ${videoWidth}x${videoHeight}, Fitted: ${destWidth}x${destHeight}`);
       } else {
         // Fallback: Direct stretch if dimensions not available
         tempCtx.drawImage(
@@ -828,14 +832,15 @@ export default function CapturePage() {
 
         {/* Enhanced Camera Section - Full Screen on Mobile */}
         <div className="w-full max-w-none sm:max-w-lg md:max-w-xl mx-auto px-1 sm:px-4 md:px-0">
-          <div className="bg-white/5 backdrop-blur-xl rounded-xl sm:rounded-2xl md:rounded-3xl p-2 sm:p-4 md:p-6 lg:p-8 border border-white/10 shadow-2xl relative overflow-hidden mobile-camera-container">
+          <div className="bg-gradient-to-br from-blue-500/20 via-purple-500/20 to-pink-500/20 backdrop-blur-xl rounded-xl sm:rounded-2xl md:rounded-3xl p-2 sm:p-4 md:p-6 lg:p-8 border border-white/20 shadow-2xl relative overflow-hidden mobile-camera-container">
             {/* Decorative elements */}
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400"></div>
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400"></div>
+            <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-pink-400 via-purple-400 to-blue-400"></div>
 
             <div className="text-center mb-3 sm:mb-4 md:mb-6">
-              <div className="inline-flex items-center space-x-2 sm:space-x-3 bg-white/10 backdrop-blur-lg rounded-lg sm:rounded-xl md:rounded-2xl px-3 sm:px-4 md:px-6 py-2 sm:py-2 md:py-3 border border-white/20">
-                <span className="text-lg sm:text-xl md:text-2xl">📹</span>
-                <h3 className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-white">Camera</h3>
+              <div className="inline-flex items-center space-x-2 sm:space-x-3 bg-gradient-to-r from-blue-500/30 to-purple-500/30 backdrop-blur-lg rounded-lg sm:rounded-xl md:rounded-2xl px-3 sm:px-4 md:px-6 py-2 sm:py-2 md:py-3 border border-white/30 shadow-lg">
+                <span className="text-lg sm:text-xl md:text-2xl">📸</span>
+                <h3 className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-white">Group Photo Camera</h3>
               </div>
             </div>
 
@@ -875,6 +880,18 @@ export default function CapturePage() {
 
             </div>
 
+            {/* Group Photo Instructions */}
+            {steps < 3 && (
+              <div className="mt-4 text-center">
+                <div className="inline-flex items-center space-x-2 bg-blue-500/20 backdrop-blur-lg rounded-lg px-4 py-2 border border-blue-400/30">
+                  <span className="text-lg">👥</span>
+                  <span className="text-white text-sm font-medium">
+                    Position everyone in the camera view - wider area now visible!
+                  </span>
+                </div>
+              </div>
+            )}
+
             {/* Enhanced Progress indicator */}
             <div className="mt-4 sm:mt-6 flex justify-center space-x-4 sm:space-x-3">
                 {[1, 2, 3].map((step) => (
@@ -905,12 +922,12 @@ export default function CapturePage() {
                 className={`w-full py-5 sm:py-4 md:py-5 px-6 rounded-xl sm:rounded-2xl font-bold text-xl sm:text-lg md:text-xl transition-all duration-300 transform relative overflow-hidden mobile-button ${
                   steps >= 3
                     ? 'bg-gradient-to-r from-gray-500 to-gray-600 cursor-not-allowed text-gray-200'
-                    : 'bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 hover:from-pink-600 hover:via-purple-600 hover:to-indigo-600 text-white shadow-2xl hover:shadow-pink-500/25 hover:scale-105 active:scale-95'
+                    : 'bg-gradient-to-r from-green-500 via-blue-500 to-purple-500 hover:from-green-600 hover:via-blue-600 hover:to-purple-600 text-white shadow-2xl hover:shadow-blue-500/25 hover:scale-105 active:scale-95 border border-white/30'
                 }`}
               >
                 <div className="relative z-10 flex items-center justify-center space-x-3">
                   <span className="text-2xl sm:text-2xl">{steps >= 3 ? '✅' : '📸'}</span>
-                  <span className="text-lg sm:text-base md:text-lg">{steps >= 3 ? 'All Photos Captured!' : 'Capture Photo'}</span>
+                  <span className="text-lg sm:text-base md:text-lg">{steps >= 3 ? 'All Photos Captured!' : 'Capture Group Photo'}</span>
                 </div>
                 {steps < 3 && (
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>

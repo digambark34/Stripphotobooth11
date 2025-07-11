@@ -11,13 +11,12 @@
   }
 
   .mobile-camera-video {
-    min-height: 65vh !important;
-    max-height: 75vh !important;
-    object-fit: contain !important; /* Changed from cover to contain to force landscape */
+    min-height: 80vh !important;
+    max-height: 85vh !important;
+    object-fit: contain !important; /* Show maximum area for multiple people */
     width: 100% !important;
     border-radius: 8px !important;
-    /* Force landscape aspect ratio for consistent capture */
-    aspect-ratio: 16/9 !important;
+    /* Much larger view for group photos */
   }
   
   .mobile-header {
@@ -55,7 +54,6 @@
     min-height: 40vh !important;
     max-height: 55vh !important;
     object-fit: contain !important;
-    aspect-ratio: 16/9 !important;
   }
 }
 
