@@ -147,15 +147,15 @@ export default function CapturePage() {
     }
   }, [settings.template, settings.textStyle, settings.eventName, initializeCanvas]);
 
-  // Photo boxes layout with slightly smaller dimensions for cleaner look
+  // Photo boxes layout with increased width and height
   const addBeautifulText = (ctx) => {
     const canvasWidth = 660;   // Actual canvas width
-    const photoWidth = 540;    // Further reduced width for cleaner, neater look
-    const photoHeight = 380;   // Further reduced height for cleaner spacing
-    const photoX = (canvasWidth - photoWidth) / 2; // Center the photo boxes
+    const photoWidth = 580;    // INCREASED width - expand left and right
+    const photoHeight = 420;   // INCREASED height - capture more vertically
+    const photoX = (canvasWidth - photoWidth) / 2; // Center the wider photo boxes
 
-    // Photo frame positions - adjusted for better spacing
-    const photoPositions = [50, 510, 970]; // Slightly more spacing between boxes
+    // Photo frame positions - first box moved up, better gaps between boxes
+    const photoPositions = [40, 500, 960]; // First box higher, more gap between boxes
 
     // Add simple white borders around photo frames to match your image
     photoPositions.forEach((photoY) => {
@@ -460,16 +460,16 @@ export default function CapturePage() {
       return;
     }
 
-    // Photo frames with slightly smaller dimensions for cleaner look
-    const photoWidth = 540;    // Further reduced width for cleaner, neater look
-    const photoHeight = 380;   // Further reduced height for cleaner spacing
-    const photoX = (660 - photoWidth) / 2; // Center the photo boxes
+    // Photo frames with increased width and height
+    const photoWidth = 580;    // INCREASED width - expand left and right
+    const photoHeight = 420;   // INCREASED height - capture more vertically
+    const photoX = (660 - photoWidth) / 2; // Center the wider photo boxes
 
-    // Y positions - adjusted for better spacing
+    // Y positions - first box moved up, better gaps between boxes
     const photoPositions = [
-      50,   // First photo box Y position (slightly lower)
-      510,  // Second photo box Y position (more spacing)
-      970   // Third photo box Y position (more spacing)
+      40,   // First photo box Y position (moved higher)
+      500,  // Second photo box Y position (more gap from first)
+      960   // Third photo box Y position (more gap from second)
     ];
 
     const photoY = photoPositions[steps] || photoPositions[0];
@@ -479,8 +479,8 @@ export default function CapturePage() {
 
     // Capture current photo from video - fit exactly inside photo box
     const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = photoWidth;   // Use actual photo width (560px - slightly smaller)
-    tempCanvas.height = photoHeight; // Use actual photo height (400px - slightly smaller)
+    tempCanvas.width = photoWidth;   // Use actual photo width (580px - increased)
+    tempCanvas.height = photoHeight; // Use actual photo height (420px - increased)
 
     // Ensure consistent scaling across environments
     tempCanvas.style.width = photoWidth + 'px';
