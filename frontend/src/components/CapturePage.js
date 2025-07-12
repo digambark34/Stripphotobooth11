@@ -16,6 +16,7 @@ export default function CapturePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [capturedPhotos, setCapturedPhotos] = useState([]); // Store captured photo data
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false); // Processing delay between captures
 
   // Fallback API URL if environment variable is not set
   const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
@@ -497,7 +498,7 @@ export default function CapturePage() {
   }, []);
 
   const startCapture = () => {
-    if (steps >= 3) return;
+    if (steps >= 3 || isProcessing) return;
 
     // Check if video is ready before starting capture
     if (!isVideoReady()) {
@@ -508,8 +509,9 @@ export default function CapturePage() {
       return;
     }
 
-    // Instant photo capture - no countdown timer
-    console.log('📸 Taking photo instantly...');
+    // Start processing state
+    setIsProcessing(true);
+    console.log('📸 Taking photo with processing delay...');
     takePhoto();
   };
 
@@ -730,6 +732,12 @@ export default function CapturePage() {
     // No logo overlay - clean template with photos only
 
     setSteps(steps + 1);
+
+    // Add processing delay to ensure proper strip generation
+    setTimeout(() => {
+      setIsProcessing(false);
+      console.log('✅ Processing complete, ready for next capture');
+    }, 2000); // 2 second delay between captures
   };
 
   const submit = async () => {
@@ -792,12 +800,6 @@ export default function CapturePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800 relative overflow-hidden">
-      {/* Animated Background Elements */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-500/20 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-blue-500/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl animate-pulse delay-500"></div>
-      </div>
 
       {/* Notification */}
       {notification && (
@@ -828,7 +830,6 @@ export default function CapturePage() {
             <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-black text-white mb-2 sm:mb-3 bg-gradient-to-r from-white via-purple-200 to-pink-200 bg-clip-text text-transparent">
               📸 Strip Photobooth
             </h1>
-            <div className="w-16 sm:w-24 h-1 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full mx-auto mb-2 sm:mb-4"></div>
             <p className="text-sm sm:text-base md:text-lg lg:text-xl text-white/90 font-medium">Create amazing photo strips instantly!</p>
 
             {/* Refresh Button */}
@@ -851,41 +852,31 @@ export default function CapturePage() {
         </div>
 
         {/* Enhanced Camera Section - Full Screen on Mobile */}
-        <div className="w-full max-w-none sm:max-w-lg md:max-w-xl mx-auto px-1 sm:px-4 md:px-0">
-          <div className="bg-gradient-to-br from-blue-500/20 via-purple-500/20 to-pink-500/20 backdrop-blur-xl rounded-xl sm:rounded-2xl md:rounded-3xl p-2 sm:p-4 md:p-6 lg:p-8 border border-white/20 shadow-2xl relative overflow-hidden mobile-camera-container">
-            {/* Decorative elements */}
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400"></div>
-            <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-pink-400 via-purple-400 to-blue-400"></div>
+        <div className="w-full max-w-none sm:max-w-lg md:max-w-2xl lg:max-w-4xl mx-auto px-4 sm:px-6">
+          <div className="relative">
 
-            <div className="text-center mb-3 sm:mb-4 md:mb-6">
-              <div className="inline-flex items-center space-x-2 sm:space-x-3 bg-gradient-to-r from-blue-500/30 to-purple-500/30 backdrop-blur-lg rounded-lg sm:rounded-xl md:rounded-2xl px-3 sm:px-4 md:px-6 py-2 sm:py-2 md:py-3 border border-white/30 shadow-lg">
-                <span className="text-lg sm:text-xl md:text-2xl">📸</span>
-                <h3 className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-white">Group Photo Camera</h3>
-              </div>
-            </div>
 
-            <div className="relative group flex justify-center items-start overflow-hidden">
-              <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                className="w-full rounded-lg sm:rounded-xl md:rounded-2xl shadow-2xl border-2 sm:border-3 md:border-4 border-white/20 group-hover:border-white/30 transition-all duration-300 mobile-camera-video"
-                style={{
-                  width: '100%',
-                  aspectRatio: '11 / 30', // Match strip ratio 660x1800
-                  objectFit: 'contain',
-                  transform: 'scale(1.1)',
-                  transformOrigin: 'top center'
-                }}
-              />
 
-              {/* Frame overlay to help users stay in frame */}
-              <div className="absolute inset-4 border-2 border-white/30 rounded-lg pointer-events-none"></div>
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              className="w-full rounded-lg shadow-2xl border-2 border-white/20"
+              style={{
+                width: '100%',
+                height: '50vh', // Mobile: compact height
+                minHeight: '400px', // Desktop: minimum height
+                maxHeight: '70vh', // Desktop: maximum height
+                objectFit: 'contain',
+                transform: 'scale(1.1)',
+                transformOrigin: 'top center'
+              }}
+            />
 
-              {/* Overlay gradient */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent rounded-2xl pointer-events-none"></div>
+            {/* Frame overlay to help users stay in frame */}
+            <div className="absolute inset-2 border-2 border-white/30 rounded-lg pointer-events-none"></div>
 
-              {/* Next Photo Message */}
+            {/* Next Photo Message */}
               {showNextPhotoMessage && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black/70 backdrop-blur-sm rounded-2xl">
                   <div className="text-center">
@@ -903,19 +894,6 @@ export default function CapturePage() {
               )}
 
 
-            </div>
-
-            {/* Group Photo Instructions */}
-            {steps < 3 && (
-              <div className="mt-4 text-center">
-                <div className="inline-flex items-center space-x-2 bg-blue-500/20 backdrop-blur-lg rounded-lg px-4 py-2 border border-blue-400/30">
-                  <span className="text-lg">👥</span>
-                  <span className="text-white text-sm font-medium">
-                    Position everyone in the camera view - wider area now visible!
-                  </span>
-                </div>
-              </div>
-            )}
 
             {/* Enhanced Progress indicator */}
             <div className="mt-4 sm:mt-6 flex justify-center space-x-4 sm:space-x-3">
@@ -940,31 +918,42 @@ export default function CapturePage() {
             </div>
 
             {/* Enhanced Capture Button - Mobile Optimized */}
-            <div className="mt-6 sm:mt-8 mobile-controls">
+            <div className="mt-3 sm:mt-4 mobile-controls">
               <button
                 onClick={startCapture}
-                disabled={steps >= 3}
+                disabled={steps >= 3 || isProcessing}
                 className={`w-full py-5 sm:py-4 md:py-5 px-6 rounded-xl sm:rounded-2xl font-bold text-xl sm:text-lg md:text-xl transition-all duration-300 transform relative overflow-hidden mobile-button ${
-                  steps >= 3
+                  steps >= 3 || isProcessing
                     ? 'bg-gradient-to-r from-gray-500 to-gray-600 cursor-not-allowed text-gray-200'
                     : 'bg-gradient-to-r from-green-500 via-blue-500 to-purple-500 hover:from-green-600 hover:via-blue-600 hover:to-purple-600 text-white shadow-2xl hover:shadow-blue-500/25 hover:scale-105 active:scale-95 border border-white/30'
                 }`}
               >
                 <div className="relative z-10 flex items-center justify-center space-x-3">
-                  <span className="text-2xl sm:text-2xl">{steps >= 3 ? '✅' : '📸'}</span>
-                  <span className="text-lg sm:text-base md:text-lg">{steps >= 3 ? 'All Photos Captured!' : 'Capture Group Photo'}</span>
+                  {isProcessing ? (
+                    <>
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+                      <span className="text-lg sm:text-base md:text-lg">Processing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-2xl sm:text-2xl">{steps >= 3 ? '✅' : '📸'}</span>
+                      <span className="text-lg sm:text-base md:text-lg">{steps >= 3 ? 'All Photos Captured!' : 'Capture Group Photo'}</span>
+                    </>
+                  )}
                 </div>
-                {steps < 3 && (
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                )}
               </button>
             </div>
 
             {/* Camera Switch Button - Mobile Optimized */}
-            <div className="mt-3 sm:mt-4">
+            <div className="mt-2 sm:mt-3">
               <button
                 onClick={switchCamera}
-                className="w-full py-4 sm:py-3 px-4 bg-white/10 hover:bg-white/20 backdrop-blur-lg rounded-xl text-white font-medium transition-all duration-300 transform hover:scale-105 active:scale-95 border border-white/20 hover:border-white/30 mobile-camera-switch"
+                disabled={isProcessing}
+                className={`w-full py-4 sm:py-3 px-4 backdrop-blur-lg rounded-xl text-white font-medium transition-all duration-300 transform border mobile-camera-switch ${
+                  isProcessing
+                    ? 'bg-gray-500/20 cursor-not-allowed border-gray-500/30'
+                    : 'bg-white/10 hover:bg-white/20 hover:scale-105 active:scale-95 border-white/20 hover:border-white/30'
+                }`}
               >
                 <div className="flex items-center justify-center space-x-2 sm:space-x-3">
                   <span className="text-xl">🔄</span>
@@ -1012,9 +1001,6 @@ export default function CapturePage() {
                     </>
                   )}
                 </div>
-                {steps >= 3 && !isSubmitting && (
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                )}
               </button>
             </div>
           </div>
