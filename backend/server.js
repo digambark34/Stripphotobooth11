@@ -69,8 +69,9 @@ app.use(cors({
   optionsSuccessStatus: 200 // For legacy browser support
 }));
 
-app.use(express.json({ limit: '25mb' }));
-app.use(express.urlencoded({ extended: true, limit: '25mb' }));
+// Optimized payload limits for photo strip uploads
+app.use(express.json({ limit: '20mb' }));
+app.use(express.urlencoded({ extended: true, limit: '20mb' }));
 
 // ✅ Request logging
 app.use((req, _res, next) => {
@@ -105,6 +106,9 @@ const server = app.listen(PORT, () => {
   console.log(`✅ Backend running on port ${PORT}`);
   console.log(`✅ Environment: ${process.env.NODE_ENV || 'development'}`);
 });
+
+// ✅ Set server timeout for large uploads
+server.timeout = 60000; // 60 seconds timeout
 
 // ✅ Graceful Shutdown
 const gracefulShutdown = (signal) => {

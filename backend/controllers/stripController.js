@@ -5,7 +5,7 @@ exports.uploadStrip = async (req, res) => {
   try {
     const { image, eventName, template } = req.body;
 
-    // ✅ Enhanced Validation
+    // ✅ Enhanced Validation for Blank Strip Prevention
     if (!image) {
       return res.status(400).json({ message: "❌ Image data is missing" });
     }
@@ -14,14 +14,45 @@ exports.uploadStrip = async (req, res) => {
       return res.status(400).json({ message: "❌ Invalid image format" });
     }
 
-    // ✅ Upload main image to Cloudinary
-    const uploadResult = await cloudinary.uploader.upload(image, {
-      folder: 'strip-photobooth',
-      public_id: `strip_${Date.now()}`,
-      resource_type: 'image'
-    });
+    // ✅ Check image size to prevent blank/corrupted uploads
+    if (image.length < 10000) { // Less than ~7KB indicates blank image
+      return res.status(400).json({ message: "❌ Image appears to be blank or corrupted" });
+    }
 
-    console.log(`✅ Strip uploaded to Cloudinary: ${uploadResult.secure_url}`);
+    // ✅ Check for maximum size to prevent timeouts
+    if (image.length > 25 * 1024 * 1024) { // 25MB limit
+      return res.status(400).json({ message: "❌ Image too large. Please compress and try again." });
+    }
+
+    console.log(`📦 Received image: ${(image.length / 1024).toFixed(1)}KB`);
+
+    // ✅ Upload main image to Cloudinary with enhanced error handling
+    let uploadResult;
+    try {
+      uploadResult = await cloudinary.uploader.upload(image, {
+        folder: 'strip-photobooth',
+        public_id: `strip_${Date.now()}`,
+        resource_type: 'image',
+        timeout: 60000, // 60 second timeout for Cloudinary
+        quality: 'auto:good', // Automatic quality optimization
+        format: 'auto' // Automatic format selection (WebP when supported)
+      });
+
+      // ✅ Validate Cloudinary response
+      if (!uploadResult || !uploadResult.secure_url) {
+        throw new Error('Cloudinary upload failed - no URL returned');
+      }
+
+      console.log(`✅ Strip uploaded to Cloudinary: ${uploadResult.secure_url}`);
+    } catch (cloudinaryError) {
+      console.error('❌ Cloudinary upload failed:', cloudinaryError);
+
+      // Return specific error for Cloudinary failures
+      return res.status(500).json({
+        message: "❌ Image upload service temporarily unavailable. Please try again.",
+        error: process.env.NODE_ENV === 'development' ? cloudinaryError.message : undefined
+      });
+    }
 
 
 

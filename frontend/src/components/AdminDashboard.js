@@ -184,11 +184,20 @@ export default function AdminDashboard() {
       setLoading(true);
       setError(null);
 
-      const res = await axios.get(`${API_BASE_URL}/api/strips`);
+      // Create axios instance with optimized timeout for admin operations
+      const adminAxios = axios.create({
+        timeout: 30000, // 30 seconds for loading strips
+      });
+
+      const res = await adminAxios.get(`${API_BASE_URL}/api/strips`);
       setStrips(res.data);
       setNotification({ type: 'success', message: `✅ Loaded ${res.data.length} strips` });
     } catch (error) {
-      setError(`Failed to load strips: ${error.response?.data?.message || error.message}`);
+      let errorMessage = `Failed to load strips: ${error.response?.data?.message || error.message}`;
+      if (error.code === 'ECONNABORTED') {
+        errorMessage = "Failed to load strips: Connection timeout. Please check your internet connection.";
+      }
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

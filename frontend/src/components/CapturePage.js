@@ -3,6 +3,18 @@ import axios from "axios";
 import axiosRetry from 'axios-retry';
 import './MobileCamera.css';
 
+// Image preloading utility for canvas stability
+const loadImage = (src) => new Promise((resolve, reject) => {
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => resolve(img);
+  img.onerror = (error) => {
+    console.error('❌ Failed to load image:', src, error);
+    reject(new Error(`Failed to load image: ${src}`));
+  };
+  img.src = src;
+});
+
 // Configure axios retry with enhanced UX and smart retry logic
 axiosRetry(axios, {
   retries: 3,
@@ -19,8 +31,8 @@ axiosRetry(axios, {
   }
 });
 
-// Add timeout protection
-axios.defaults.timeout = 10000; // 10 second timeout per request
+// Global timeout configuration for all requests
+axios.defaults.timeout = 30000; // 30 seconds - optimal balance of reliability and speed
 
 export default function CapturePage() {
   const videoRef = useRef(null);
@@ -39,7 +51,6 @@ export default function CapturePage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false); // Processing delay between captures
   const [cachedTemplate, setCachedTemplate] = useState(null); // Cache template for offline use
-  const [isOffline, setIsOffline] = useState(!navigator.onLine); // Track online status
   const [isSwitchingCamera, setIsSwitchingCamera] = useState(false); // Track camera switching
 
   // Fallback API URL if environment variable is not set
@@ -994,25 +1005,64 @@ export default function CapturePage() {
         throw new Error('Canvas not ready after delay');
       }
 
-      const dataUrl = canvasRef.current.toDataURL("image/jpeg", 0.8);
+      // Mobile-optimized image generation using toBlob (more stable than toDataURL)
+      const generateImageData = () => new Promise((resolve, reject) => {
+        try {
+          // Try WebP format first (better compression, quality)
+          canvasRef.current.toBlob((blob) => {
+            if (!blob || blob.size < 1000) {
+              reject(new Error('Generated image appears to be blank or too small'));
+              return;
+            }
 
-      // Validate the generated image data
-      if (!dataUrl || dataUrl.length < 10000) {
-        throw new Error('Generated image appears to be blank or too small');
-      }
+            // Convert blob to base64 for upload
+            const reader = new FileReader();
+            reader.onload = () => {
+              console.log(`📦 WebP image generated: ${(blob.size / 1024).toFixed(1)}KB`);
+              resolve(reader.result);
+            };
+            reader.onerror = () => reject(new Error('Failed to convert image to base64'));
+            reader.readAsDataURL(blob);
+          }, 'image/webp', 0.9);
+        } catch (error) {
+          // Fallback to JPEG if WebP fails
+          console.log('📦 WebP failed, using JPEG fallback');
+          canvasRef.current.toBlob((blob) => {
+            if (!blob || blob.size < 1000) {
+              reject(new Error('Generated image appears to be blank or too small'));
+              return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = () => {
+              console.log(`📦 JPEG image generated: ${(blob.size / 1024).toFixed(1)}KB`);
+              resolve(reader.result);
+            };
+            reader.onerror = () => reject(new Error('Failed to convert image to base64'));
+            reader.readAsDataURL(blob);
+          }, 'image/jpeg', 0.8);
+        }
+      });
+
+      const dataUrl = await generateImageData();
 
       console.log(`📤 Submitting photo strip, data size: ${(dataUrl.length / 1024).toFixed(1)}KB`);
 
-      // Create a custom axios instance for this upload with retry status updates
-      const uploadAxios = axios.create();
+      // Create optimized axios instance for uploads
+      const uploadAxios = axios.create({
+        timeout: 60000, // 60 seconds - balanced timeout for uploads
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
 
-      // Configure retry with status updates for this specific request
+      // Enhanced retry configuration with user feedback
       axiosRetry(uploadAxios, {
-        retries: 3,
+        retries: 2, // Reduced to 2 retries for faster failure detection
         retryDelay: (retryCount, error) => {
-          console.warn(`🔄 Upload retry ${retryCount}/3 due to:`, error.message);
-          setRetryStatus(`Retrying upload (${retryCount}/3)...`);
-          return axiosRetry.exponentialDelay(retryCount);
+          console.warn(`🔄 Upload retry ${retryCount}/2 due to:`, error.message);
+          setRetryStatus(`Upload failed. Retrying... (${retryCount}/2)`);
+          return Math.min(1000 * Math.pow(2, retryCount), 5000); // Max 5 second delay
         },
         retryCondition: (error) => {
           // Smart retry: Only retry on network errors and 5xx server errors
