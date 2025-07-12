@@ -2,6 +2,8 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
+const rateLimit = require("express-rate-limit");
+const helmet = require("helmet");
 const stripRoutes = require("./routes/stripRoutes");
 const settingsRoutes = require("./routes/settingsRoutes");
 const healthRoutes = require("./routes/healthRoutes");
@@ -23,10 +25,13 @@ console.log("🔗 Connection string:", mongoUri.replace(/\/\/.*@/, '//***:***@')
 mongoose.connect(mongoUri, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
-  maxPoolSize: 50,                      // Allow more concurrent users
+  maxPoolSize: 100,                     // Increased for 1000+ users
+  minPoolSize: 10,                      // Maintain minimum connections
   serverSelectionTimeoutMS: 5000,       // Retry for 5 seconds if DB not available
-  socketTimeoutMS: 45000,               // Timeout per operation (default is 30s)
-  connectTimeoutMS: 10000               // Connection timeout if Mongo is down
+  socketTimeoutMS: 45000,               // Timeout per operation
+  connectTimeoutMS: 10000,              // Connection timeout if Mongo is down
+  maxIdleTimeMS: 30000,                 // Close connections after 30s idle
+  bufferMaxEntries: 0                   // Disable mongoose buffering for production
 })
 .then(() => console.log("✅ MongoDB connected successfully"))
 .catch((err) => {
@@ -36,6 +41,37 @@ mongoose.connect(mongoUri, {
 
 // ✅ Initialize Express App
 const app = express();
+
+// ✅ Production Security Headers
+app.use(helmet({
+  crossOriginEmbedderPolicy: false, // Allow Cloudinary embeds
+  contentSecurityPolicy: false // Disable CSP for now (can be configured later)
+}));
+
+// ✅ Rate Limiting for Live Events (1000 users)
+const uploadLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute window
+  max: 5, // 5 uploads per minute per IP
+  message: {
+    error: "Too many uploads. Please wait a moment before trying again."
+  },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+const generalLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute window
+  max: 100, // 100 requests per minute per IP
+  message: {
+    error: "Too many requests. Please slow down."
+  },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+// Apply rate limiting
+app.use('/api/strips', uploadLimiter); // Strict limit for uploads
+app.use('/api/', generalLimiter); // General limit for other endpoints
 
 // ✅ Local Development CORS Configuration
 app.use(cors({
