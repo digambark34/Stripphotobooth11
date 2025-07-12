@@ -861,12 +861,12 @@ export default function CapturePage() {
               ref={videoRef}
               autoPlay
               playsInline
-              className="w-full rounded-lg shadow-2xl border-2 border-white/20"
+              className="w-full rounded-lg shadow-2xl border-2 border-white/20 mobile-camera-video"
               style={{
                 width: '100%',
                 height: '50vh', // Mobile: compact height
-                minHeight: '400px', // Desktop: minimum height
-                maxHeight: '70vh', // Desktop: maximum height
+                minHeight: '350px', // Desktop: larger minimum height
+                maxHeight: '45vh', // Desktop: larger maximum height
                 objectFit: 'contain',
                 transform: 'scale(1.1)',
                 transformOrigin: 'top center'
@@ -918,11 +918,11 @@ export default function CapturePage() {
             </div>
 
             {/* Enhanced Capture Button - Mobile Optimized */}
-            <div className="mt-3 sm:mt-4 mobile-controls">
+            <div className="mt-10 sm:mt-12 mobile-controls">
               <button
                 onClick={startCapture}
                 disabled={steps >= 3 || isProcessing}
-                className={`w-full py-5 sm:py-4 md:py-5 px-6 rounded-xl sm:rounded-2xl font-bold text-xl sm:text-lg md:text-xl transition-all duration-300 transform relative overflow-hidden mobile-button ${
+                className={`w-full py-3 sm:py-3 md:py-3 px-4 rounded-xl sm:rounded-2xl font-bold text-lg sm:text-base md:text-lg transition-all duration-300 transform relative overflow-hidden mobile-button ${
                   steps >= 3 || isProcessing
                     ? 'bg-gradient-to-r from-gray-500 to-gray-600 cursor-not-allowed text-gray-200'
                     : 'bg-gradient-to-r from-green-500 via-blue-500 to-purple-500 hover:from-green-600 hover:via-blue-600 hover:to-purple-600 text-white shadow-2xl hover:shadow-blue-500/25 hover:scale-105 active:scale-95 border border-white/30'
@@ -937,7 +937,7 @@ export default function CapturePage() {
                   ) : (
                     <>
                       <span className="text-2xl sm:text-2xl">{steps >= 3 ? '✅' : '📸'}</span>
-                      <span className="text-lg sm:text-base md:text-lg">{steps >= 3 ? 'All Photos Captured!' : 'Capture Group Photo'}</span>
+                      <span className="text-lg sm:text-base md:text-lg">{steps >= 3 ? 'All Photos Captured!' : 'Capture Photo'}</span>
                     </>
                   )}
                 </div>
@@ -945,7 +945,7 @@ export default function CapturePage() {
             </div>
 
             {/* Camera Switch Button - Mobile Optimized */}
-            <div className="mt-2 sm:mt-3">
+            <div className="mt-8 sm:mt-10 mobile-controls">
               <button
                 onClick={switchCamera}
                 disabled={isProcessing}
@@ -966,7 +966,7 @@ export default function CapturePage() {
             </div>
 
             {/* Enhanced Submit Section */}
-            <div className="mt-8 pt-6 border-t border-gradient-to-r from-transparent via-white/20 to-transparent">
+            <div className="mt-8 pt-6 border-t border-gradient-to-r from-transparent via-white/20 to-transparent mobile-controls">
               <div className="text-center mb-6">
                 <div className="inline-block bg-white/10 backdrop-blur-lg rounded-2xl px-6 py-3 border border-white/20">
                   <p className="text-white/90 text-sm sm:text-base font-medium">
@@ -982,7 +982,7 @@ export default function CapturePage() {
               <button
                 onClick={submit}
                 disabled={steps < 3 || isSubmitting}
-                className={`w-full py-4 sm:py-5 px-6 rounded-2xl font-bold text-lg sm:text-xl transition-all duration-300 transform relative overflow-hidden ${
+                className={`w-full py-4 sm:py-5 px-6 rounded-2xl font-bold text-lg sm:text-xl transition-all duration-300 transform relative overflow-hidden mobile-button ${
                   steps >= 3 && !isSubmitting
                     ? 'bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500 hover:from-emerald-600 hover:via-green-600 hover:to-teal-600 text-white shadow-2xl hover:shadow-emerald-500/25 hover:scale-105 active:scale-95'
                     : 'bg-gradient-to-r from-gray-600 to-gray-700 text-gray-400 cursor-not-allowed'

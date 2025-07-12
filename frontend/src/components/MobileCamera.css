@@ -1,5 +1,45 @@
 /* Mobile Camera Optimization Styles - Simplified */
 
+/* Desktop optimization - larger size for better usability */
+@media (min-width: 1024px) {
+  .mobile-camera-video {
+    max-height: 40vh !important;
+    min-height: 350px !important;
+    max-width: 600px !important;
+    margin: 0 auto !important;
+  }
+
+  .mobile-controls {
+    max-width: 600px !important;
+    margin: 0 auto !important;
+  }
+
+  .mobile-button, .mobile-camera-switch {
+    max-width: 600px !important;
+    margin: 0 auto !important;
+  }
+}
+
+/* Tablet optimization */
+@media (min-width: 641px) and (max-width: 1023px) {
+  .mobile-camera-video {
+    max-height: 40vh !important;
+    min-height: 320px !important;
+    max-width: 450px !important;
+    margin: 0 auto !important;
+  }
+
+  .mobile-controls {
+    max-width: 450px !important;
+    margin: 0 auto !important;
+  }
+
+  .mobile-button, .mobile-camera-switch {
+    max-width: 450px !important;
+    margin: 0 auto !important;
+  }
+}
+
 /* Mobile-first responsive design */
 @media (max-width: 640px) {
   .mobile-header {
