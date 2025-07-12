@@ -40,6 +40,7 @@ export default function CapturePage() {
   const [isProcessing, setIsProcessing] = useState(false); // Processing delay between captures
   const [cachedTemplate, setCachedTemplate] = useState(null); // Cache template for offline use
   const [isOffline, setIsOffline] = useState(!navigator.onLine); // Track online status
+  const [isSwitchingCamera, setIsSwitchingCamera] = useState(false); // Track camera switching
 
   // Fallback API URL if environment variable is not set
   const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
@@ -436,16 +437,27 @@ export default function CapturePage() {
     };
   }, []);
 
-  // Camera initialization with higher resolution and camera switching support
+  // Enhanced camera initialization with better switching support
   const initializeCamera = useCallback(async (facingMode = currentCamera) => {
     try {
-      // Stop existing stream
+      console.log(`📹 Starting camera initialization with facing mode: ${facingMode}`);
+
+      // Stop existing stream properly
       if (videoRef.current && videoRef.current.srcObject) {
         const tracks = videoRef.current.srcObject.getTracks();
-        tracks.forEach(track => track.stop());
+        tracks.forEach(track => {
+          track.stop();
+          console.log(`🛑 Stopped ${track.kind} track`);
+        });
+
+        // Clear the video source
+        videoRef.current.srcObject = null;
+
+        // Wait for cleanup to complete
+        await new Promise(resolve => setTimeout(resolve, 200));
       }
 
-      console.log(`📹 Initializing camera with facing mode: ${facingMode}`);
+      console.log(`📹 Requesting camera access for: ${facingMode}`);
 
       // Maximum field of view for multiple people
       const constraints = {
@@ -477,27 +489,53 @@ export default function CapturePage() {
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        console.log(`✅ Camera initialized successfully with ${facingMode} camera`);
+        console.log(`✅ Camera stream assigned to video element`);
 
-        // Wait for video to be fully ready before allowing captures
-        await new Promise((resolve) => {
+        // Enhanced video readiness validation
+        await new Promise((resolve, reject) => {
+          const timeout = setTimeout(() => {
+            reject(new Error('Video loading timeout'));
+          }, 10000); // 10 second timeout
+
           const handleLoadedData = () => {
+            clearTimeout(timeout);
             videoRef.current.removeEventListener('loadeddata', handleLoadedData);
+            videoRef.current.removeEventListener('error', handleError);
+            console.log(`📹 Video data loaded for ${facingMode} camera`);
             resolve();
           };
+
+          const handleError = (error) => {
+            clearTimeout(timeout);
+            videoRef.current.removeEventListener('loadeddata', handleLoadedData);
+            videoRef.current.removeEventListener('error', handleError);
+            reject(error);
+          };
+
           videoRef.current.addEventListener('loadeddata', handleLoadedData);
+          videoRef.current.addEventListener('error', handleError);
         });
 
-        // Additional delay to ensure video is fully ready for capture
-        await new Promise(resolve => setTimeout(resolve, 800));
+        // Wait for video dimensions to be available
+        await new Promise((resolve) => {
+          const checkDimensions = () => {
+            if (videoRef.current && videoRef.current.videoWidth > 0 && videoRef.current.videoHeight > 0) {
+              const video = videoRef.current;
+              const videoAspect = video.videoWidth / video.videoHeight;
+              const isLandscape = videoAspect >= 1.3;
+              console.log(`📹 Video ready - Resolution: ${video.videoWidth}x${video.videoHeight}, Aspect: ${videoAspect.toFixed(2)}, ${isLandscape ? 'Landscape ✅' : 'Portrait ❌'}`);
+              resolve();
+            } else {
+              setTimeout(checkDimensions, 100);
+            }
+          };
+          checkDimensions();
+        });
 
-        // Log actual video resolution and display size for debugging
-        videoRef.current.onloadedmetadata = () => {
-          const video = videoRef.current;
-          const videoAspect = video.videoWidth / video.videoHeight;
-          const isLandscape = videoAspect >= 1.3;
-          console.log(`📹 Video loaded - Resolution: ${video.videoWidth}x${video.videoHeight}, Aspect: ${videoAspect.toFixed(2)}, ${isLandscape ? 'Landscape ✅' : 'Portrait ❌'}`);
-        };
+        // Additional stabilization delay for camera switch
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        console.log(`✅ Camera fully initialized and ready for ${facingMode}`);
       }
     } catch (error) {
       console.warn("Camera access error:", error);
@@ -520,13 +558,65 @@ export default function CapturePage() {
     };
   }, [initializeCamera]);
 
-  // Camera switching function
-  const switchCamera = useCallback(() => {
-    const newCamera = currentCamera === 'user' ? 'environment' : 'user';
-    setCurrentCamera(newCamera);
-    initializeCamera(newCamera);
-    console.log(`🔄 Switching to ${newCamera === 'user' ? 'front' : 'back'} camera`);
-  }, [currentCamera, initializeCamera]);
+  // Enhanced camera switching function with canvas preservation
+  const switchCamera = useCallback(async () => {
+    try {
+      console.log('🔄 Starting camera switch...');
+
+      // Prevent captures during camera switch
+      setIsProcessing(true);
+      setIsSwitchingCamera(true);
+
+      // Store current canvas state before switching
+      let canvasBackup = null;
+      if (canvasRef.current) {
+        canvasBackup = canvasRef.current.toDataURL('image/png');
+        console.log('💾 Canvas state backed up before camera switch');
+      }
+
+      const newCamera = currentCamera === 'user' ? 'environment' : 'user';
+      console.log(`🔄 Switching to ${newCamera === 'user' ? 'front' : 'back'} camera`);
+
+      // Update camera state
+      setCurrentCamera(newCamera);
+
+      // Initialize new camera
+      await initializeCamera(newCamera);
+
+      // Wait additional time for camera to fully stabilize
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Restore canvas state if it was lost
+      if (canvasBackup && canvasRef.current) {
+        const img = new Image();
+        img.onload = () => {
+          const ctx = canvasRef.current.getContext('2d');
+          ctx.drawImage(img, 0, 0);
+          console.log('✅ Canvas state restored after camera switch');
+        };
+        img.src = canvasBackup;
+      } else {
+        // Reinitialize canvas if no backup available
+        console.log('🔄 Reinitializing canvas after camera switch');
+        initializeCanvas();
+      }
+
+      console.log('✅ Camera switch completed successfully');
+
+    } catch (error) {
+      console.error('❌ Camera switch failed:', error);
+      setNotification({
+        type: "error",
+        message: "Failed to switch camera. Please try again."
+      });
+    } finally {
+      // Re-enable captures after switch is complete
+      setTimeout(() => {
+        setIsProcessing(false);
+        setIsSwitchingCamera(false);
+      }, 500);
+    }
+  }, [currentCamera, initializeCamera, initializeCanvas]);
 
   // Refresh page function
   const refreshPage = useCallback(() => {
@@ -653,7 +743,7 @@ export default function CapturePage() {
       return;
     }
 
-    // Extra check: Ensure video is fully loaded and has valid dimensions
+    // Enhanced video readiness validation
     const video = videoRef.current;
     if (!video.videoWidth || !video.videoHeight || video.readyState < 2) {
       console.error('❌ Video not fully loaded or switching cameras');
@@ -661,8 +751,22 @@ export default function CapturePage() {
         type: "error",
         message: "Camera is switching. Please wait a moment and try again."
       });
+      setIsProcessing(false);
       return;
     }
+
+    // Additional check for camera switch completion
+    if (video.videoWidth < 100 || video.videoHeight < 100) {
+      console.error('❌ Video dimensions too small, camera may still be switching');
+      setNotification({
+        type: "error",
+        message: "Camera is still initializing. Please wait and try again."
+      });
+      setIsProcessing(false);
+      return;
+    }
+
+    console.log(`📸 Video validated - ${video.videoWidth}x${video.videoHeight}, readyState: ${video.readyState}`);
 
     const ctx = canvasRef.current.getContext("2d");
     if (!ctx) {
@@ -1053,6 +1157,17 @@ export default function CapturePage() {
             {/* Frame overlay to help users stay in frame */}
             <div className="absolute inset-2 border-2 border-white/30 rounded-lg pointer-events-none"></div>
 
+            {/* Camera Switching Indicator */}
+            {isSwitchingCamera && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/80 backdrop-blur-sm rounded-2xl">
+                <div className="text-center text-white">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+                  <p className="text-lg font-semibold">Switching Camera...</p>
+                  <p className="text-sm opacity-75">Please wait a moment</p>
+                </div>
+              </div>
+            )}
+
             {/* Next Photo Message */}
               {showNextPhotoMessage && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black/70 backdrop-blur-sm rounded-2xl">
@@ -1125,19 +1240,28 @@ export default function CapturePage() {
             <div className="mt-8 sm:mt-10 mobile-controls">
               <button
                 onClick={switchCamera}
-                disabled={isProcessing}
+                disabled={isProcessing || isSwitchingCamera}
                 className={`w-full py-4 sm:py-3 px-4 backdrop-blur-lg rounded-xl text-white font-medium transition-all duration-300 transform border mobile-camera-switch ${
-                  isProcessing
+                  isProcessing || isSwitchingCamera
                     ? 'bg-gray-500/20 cursor-not-allowed border-gray-500/30'
                     : 'bg-white/10 hover:bg-white/20 hover:scale-105 active:scale-95 border-white/20 hover:border-white/30'
                 }`}
               >
                 <div className="flex items-center justify-center space-x-2 sm:space-x-3">
-                  <span className="text-xl">🔄</span>
-                  <span className="text-base sm:text-sm md:text-base">Switch to {currentCamera === 'user' ? 'Back' : 'Front'} Camera</span>
-                  <span className="text-xs sm:text-sm opacity-75 hidden sm:inline">
-                    ({currentCamera === 'user' ? 'Front' : 'Back'} Active)
-                  </span>
+                  {isSwitchingCamera ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <span className="text-base sm:text-sm md:text-base">Switching Camera...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-xl">🔄</span>
+                      <span className="text-base sm:text-sm md:text-base">Switch to {currentCamera === 'user' ? 'Back' : 'Front'} Camera</span>
+                      <span className="text-xs sm:text-sm opacity-75 hidden sm:inline">
+                        ({currentCamera === 'user' ? 'Front' : 'Back'} Active)
+                      </span>
+                    </>
+                  )}
                 </div>
               </button>
             </div>
