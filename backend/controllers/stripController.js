@@ -35,7 +35,8 @@ exports.uploadStrip = async (req, res) => {
         resource_type: 'image',
         timeout: 60000, // 60 second timeout for Cloudinary
         quality: 'auto:good', // Automatic quality optimization
-        format: 'auto' // Automatic format selection (WebP when supported)
+        fetch_format: 'auto', // Automatically deliver best format (WebP, AVIF, etc.)
+        flags: 'progressive' // Progressive JPEG for faster loading
       });
 
       // ✅ Validate Cloudinary response
