@@ -4,6 +4,9 @@ const cors = require("cors");
 const mongoose = require("mongoose");
 const rateLimit = require("express-rate-limit");
 const helmet = require("helmet");
+
+// ✅ Disable mongoose buffering for production (separate from connection options)
+mongoose.set('bufferCommands', false);
 const stripRoutes = require("./routes/stripRoutes");
 const settingsRoutes = require("./routes/settingsRoutes");
 const healthRoutes = require("./routes/healthRoutes");
@@ -30,13 +33,22 @@ mongoose.connect(mongoUri, {
   serverSelectionTimeoutMS: 5000,       // Retry for 5 seconds if DB not available
   socketTimeoutMS: 45000,               // Timeout per operation
   connectTimeoutMS: 10000,              // Connection timeout if Mongo is down
-  maxIdleTimeMS: 30000,                 // Close connections after 30s idle
-  bufferMaxEntries: 0                   // Disable mongoose buffering for production
+  maxIdleTimeMS: 30000                  // Close connections after 30s idle
 })
-.then(() => console.log("✅ MongoDB connected successfully"))
+.then(() => {
+  console.log("✅ MongoDB connected successfully");
+  console.log(`✅ Database: ${mongoose.connection.name}`);
+})
 .catch((err) => {
-  console.error("❌ MongoDB connection error:", err);
-  process.exit(1);
+  console.error("❌ MongoDB connection error:", err.message);
+
+  // Don't exit in development, but log the issue
+  if (process.env.NODE_ENV === 'production') {
+    console.error("❌ Exiting in production mode");
+    process.exit(1);
+  } else {
+    console.log("⚠️ Continuing in development mode...");
+  }
 });
 
 // ✅ Initialize Express App
