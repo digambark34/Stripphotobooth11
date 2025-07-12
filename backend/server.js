@@ -2,8 +2,6 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
-const rateLimit = require("express-rate-limit");
-const helmet = require("helmet");
 
 // ✅ Disable mongoose buffering for production (separate from connection options)
 mongoose.set('bufferCommands', false);
@@ -54,37 +52,6 @@ mongoose.connect(mongoUri, {
 // ✅ Initialize Express App
 const app = express();
 
-// ✅ Production Security Headers
-app.use(helmet({
-  crossOriginEmbedderPolicy: false, // Allow Cloudinary embeds
-  contentSecurityPolicy: false // Disable CSP for now (can be configured later)
-}));
-
-// ✅ Rate Limiting for Live Events (1000 users)
-const uploadLimiter = rateLimit({
-  windowMs: 1 * 60 * 1000, // 1 minute window
-  max: 5, // 5 uploads per minute per IP
-  message: {
-    error: "Too many uploads. Please wait a moment before trying again."
-  },
-  standardHeaders: true,
-  legacyHeaders: false
-});
-
-const generalLimiter = rateLimit({
-  windowMs: 1 * 60 * 1000, // 1 minute window
-  max: 100, // 100 requests per minute per IP
-  message: {
-    error: "Too many requests. Please slow down."
-  },
-  standardHeaders: true,
-  legacyHeaders: false
-});
-
-// Apply rate limiting
-app.use('/api/strips', uploadLimiter); // Strict limit for uploads
-app.use('/api/', generalLimiter); // General limit for other endpoints
-
 // ✅ Local Development CORS Configuration
 app.use(cors({
   origin: function (origin, callback) {
@@ -121,7 +88,7 @@ app.use(cors({
 app.use(express.json({ limit: '20mb' }));
 app.use(express.urlencoded({ extended: true, limit: '20mb' }));
 
-// ✅ Request logging
+// ✅ Simple Request logging
 app.use((req, _res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
   next();

@@ -3,18 +3,6 @@ import axios from "axios";
 import axiosRetry from 'axios-retry';
 import './MobileCamera.css';
 
-// Image preloading utility for canvas stability
-const loadImage = (src) => new Promise((resolve, reject) => {
-  const img = new Image();
-  img.crossOrigin = 'anonymous';
-  img.onload = () => resolve(img);
-  img.onerror = (error) => {
-    console.error('❌ Failed to load image:', src, error);
-    reject(new Error(`Failed to load image: ${src}`));
-  };
-  img.src = src;
-});
-
 // Configure axios retry with enhanced UX and smart retry logic
 axiosRetry(axios, {
   retries: 3,
@@ -56,26 +44,7 @@ export default function CapturePage() {
   // Fallback API URL if environment variable is not set
   const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
-  // Monitor network status for offline handling
-  useEffect(() => {
-    const handleOnline = () => {
-      setIsOffline(false);
-      console.log('🌐 Network connection restored');
-    };
 
-    const handleOffline = () => {
-      setIsOffline(true);
-      console.warn('📵 Network connection lost - using cached data');
-    };
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
 
 
 

@@ -184,19 +184,37 @@ export default function AdminDashboard() {
       setLoading(true);
       setError(null);
 
+      console.log('🔄 Attempting to load strips from:', `${API_BASE_URL}/api/strips`);
+
       // Create axios instance with optimized timeout for admin operations
       const adminAxios = axios.create({
         timeout: 30000, // 30 seconds for loading strips
       });
 
       const res = await adminAxios.get(`${API_BASE_URL}/api/strips`);
+      console.log('✅ Successfully loaded strips:', res.data.length);
       setStrips(res.data);
       setNotification({ type: 'success', message: `✅ Loaded ${res.data.length} strips` });
     } catch (error) {
-      let errorMessage = `Failed to load strips: ${error.response?.data?.message || error.message}`;
+      console.error('❌ Failed to load strips:', error);
+
+      let errorMessage = `Failed to load strips: `;
+
       if (error.code === 'ECONNABORTED') {
-        errorMessage = "Failed to load strips: Connection timeout. Please check your internet connection.";
+        errorMessage += "Connection timeout. Please check your internet connection.";
+      } else if (error.code === 'ERR_NETWORK') {
+        errorMessage += "Network error. Backend server may be down or unreachable.";
+      } else if (error.response) {
+        // Server responded with error status
+        errorMessage += `Server error (${error.response.status}): ${error.response.data?.message || error.response.statusText}`;
+      } else if (error.request) {
+        // Request was made but no response received
+        errorMessage += "No response from server. Please check if the backend is running.";
+      } else {
+        // Something else happened
+        errorMessage += error.message;
       }
+
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -260,11 +278,33 @@ export default function AdminDashboard() {
     if (!window.confirm('Are you sure you want to delete this strip?')) return;
 
     try {
-      await axios.delete(`${API_BASE_URL}/api/strips/${id}`);
+      console.log('🗑️ Attempting to delete strip:', id);
+
+      const response = await axios.delete(`${API_BASE_URL}/api/strips/${id}`, {
+        timeout: 30000, // 30 second timeout for delete operations
+      });
+
+      console.log('✅ Strip deleted successfully:', response.data);
       setNotification({ type: 'success', message: '✅ Strip deleted successfully' });
       load();
     } catch (error) {
-      setError(`Failed to delete strip: ${error.response?.data?.message || error.message}`);
+      console.error('❌ Failed to delete strip:', error);
+
+      let errorMessage = 'Failed to delete strip: ';
+
+      if (error.code === 'ECONNABORTED') {
+        errorMessage += 'Request timeout. Please try again.';
+      } else if (error.code === 'ERR_NETWORK') {
+        errorMessage += 'Network error. Please check your connection.';
+      } else if (error.response) {
+        errorMessage += `Server error (${error.response.status}): ${error.response.data?.message || error.response.statusText}`;
+      } else if (error.request) {
+        errorMessage += 'No response from server. Please check if the backend is running.';
+      } else {
+        errorMessage += error.message;
+      }
+
+      setError(errorMessage);
     }
   };
 
@@ -280,12 +320,32 @@ export default function AdminDashboard() {
 
     try {
       setLoading(true);
-      await axios.delete(`${API_BASE_URL}/api/strips/all`);
+      console.log('🗑️ Attempting to delete all strips:', strips.length);
+
+      await axios.delete(`${API_BASE_URL}/api/strips/all`, {
+        timeout: 60000, // 60 second timeout for bulk delete
+      });
+
+      console.log('✅ All strips deleted successfully');
       setNotification({ type: 'success', message: `✅ Successfully deleted all ${strips.length} strips` });
       setStrips([]); // Clear the strips array immediately
       load(); // Reload to confirm
     } catch (error) {
-      setError(`Failed to delete all strips: ${error.response?.data?.message || error.message}`);
+      console.error('❌ Failed to delete all strips:', error);
+
+      let errorMessage = 'Failed to delete all strips: ';
+
+      if (error.code === 'ECONNABORTED') {
+        errorMessage += 'Request timeout. The operation may still be in progress.';
+      } else if (error.code === 'ERR_NETWORK') {
+        errorMessage += 'Network error. Please check your connection.';
+      } else if (error.response) {
+        errorMessage += `Server error (${error.response.status}): ${error.response.data?.message || error.response.statusText}`;
+      } else {
+        errorMessage += error.message;
+      }
+
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -294,14 +354,32 @@ export default function AdminDashboard() {
   const testAPI = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/api/strips`);
-      const data = await response.json();
+      setError(null);
+
+      console.log('🧪 Manual API test started');
+
+      // Test health endpoint first
+      const healthResponse = await fetch(`${API_BASE_URL}/api/health`);
+      if (!healthResponse.ok) {
+        throw new Error(`Health check failed: ${healthResponse.status} ${healthResponse.statusText}`);
+      }
+
+      // Test strips endpoint
+      const stripsResponse = await fetch(`${API_BASE_URL}/api/strips`);
+      if (!stripsResponse.ok) {
+        throw new Error(`Strips API failed: ${stripsResponse.status} ${stripsResponse.statusText}`);
+      }
+
+      const data = await stripsResponse.json();
       setNotification({
         type: 'success',
-        message: `✅ API test successful: Found ${data.length} strips`
+        message: `✅ API test successful: Backend is running, found ${data.length} strips`
       });
+
+      console.log('✅ Manual API test completed successfully');
     } catch (error) {
-      setError(`API test failed: ${error.message}`);
+      console.error('❌ Manual API test failed:', error);
+      setError(`API test failed: ${error.message}. Backend URL: ${API_BASE_URL}`);
     } finally {
       setLoading(false);
     }
@@ -329,21 +407,37 @@ export default function AdminDashboard() {
     }
   }, [notification]);
 
+  // Enhanced API connection test
+  const testConnection = useCallback(async () => {
+    try {
+      console.log('🔄 Testing API connection to:', API_BASE_URL);
+
+      // Test with a simple health check first
+      const healthResponse = await fetch(`${API_BASE_URL}/api/health`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (healthResponse.ok) {
+        console.log('✅ Health check passed');
+        setNotification({ type: 'success', message: '✅ Backend connection successful' });
+        return true;
+      } else {
+        throw new Error(`Health check failed: ${healthResponse.status}`);
+      }
+    } catch (error) {
+      console.error('❌ API connection test failed:', error);
+      setError(`Backend connection failed: ${error.message}. Please check if the server is running at ${API_BASE_URL}`);
+      return false;
+    }
+  }, [API_BASE_URL]);
+
   // Test API connection on component mount
   useEffect(() => {
-    // Test basic connectivity silently
-    fetch(`${API_BASE_URL}/api/strips`)
-      .then(response => response.json())
-      .then(() => {
-        // Silent success - no notification needed for background check
-      })
-      .catch(error => {
-        // Only show error if it's a real connectivity issue
-        if (error.name !== 'AbortError') {
-          setError('API connection failed. Please check if the server is running.');
-        }
-      });
-  }, [API_BASE_URL]);
+    testConnection();
+  }, [testConnection]);
 
   // Load settings when authenticated
   useEffect(() => {
