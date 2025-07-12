@@ -16,12 +16,17 @@ if (!mongoUri) {
   process.exit(1);
 }
 
-// ✅ MongoDB Atlas Connection
+console.log("🔍 Attempting to connect to MongoDB...");
+console.log("🔗 Connection string:", mongoUri.replace(/\/\/.*@/, '//***:***@')); // Hide credentials
+
+// ✅ MongoDB Atlas Connection - Optimized for 1000+ concurrent users
 mongoose.connect(mongoUri, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
-  serverSelectionTimeoutMS: 5000,
-  socketTimeoutMS: 45000,
+  maxPoolSize: 50,                      // Allow more concurrent users
+  serverSelectionTimeoutMS: 5000,       // Retry for 5 seconds if DB not available
+  socketTimeoutMS: 45000,               // Timeout per operation (default is 30s)
+  connectTimeoutMS: 10000               // Connection timeout if Mongo is down
 })
 .then(() => console.log("✅ MongoDB connected successfully"))
 .catch((err) => {
@@ -64,18 +69,8 @@ app.use(cors({
   optionsSuccessStatus: 200 // For legacy browser support
 }));
 
-// ✅ Body parsing with size limits
-app.use(express.json({
-  limit: "10mb",
-  verify: (_req, res, buf) => {
-    try {
-      JSON.parse(buf);
-    } catch (e) {
-      res.status(400).json({ message: "Invalid JSON" });
-      return;
-    }
-  }
-}));
+app.use(express.json({ limit: '25mb' }));
+app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 
 // ✅ Request logging
 app.use((req, _res, next) => {

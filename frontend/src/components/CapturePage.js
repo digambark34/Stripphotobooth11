@@ -1,6 +1,26 @@
 import { useRef, useState, useEffect, useCallback } from "react";
 import axios from "axios";
+import axiosRetry from 'axios-retry';
 import './MobileCamera.css';
+
+// Configure axios retry with enhanced UX and smart retry logic
+axiosRetry(axios, {
+  retries: 3,
+  retryDelay: (retryCount, error) => {
+    // Log retry attempts for debugging
+    console.warn(`🔄 Retry attempt ${retryCount}/3 due to:`, error.message);
+    return axiosRetry.exponentialDelay(retryCount);
+  },
+  retryCondition: (error) => {
+    // Smart retry: Only retry on network errors and 5xx server errors
+    // Don't retry on 400 (Bad Request), 401 (Unauthorized), 403 (Forbidden), 404 (Not Found)
+    return axiosRetry.isNetworkOrIdempotentRequestError(error) ||
+           (error.response && error.response.status >= 500);
+  }
+});
+
+// Add timeout protection
+axios.defaults.timeout = 10000; // 10 second timeout per request
 
 export default function CapturePage() {
   const videoRef = useRef(null);
@@ -14,12 +34,36 @@ export default function CapturePage() {
   });
   const [notification, setNotification] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [retryStatus, setRetryStatus] = useState(null); // For retry feedback
   const [capturedPhotos, setCapturedPhotos] = useState([]); // Store captured photo data
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false); // Processing delay between captures
+  const [cachedTemplate, setCachedTemplate] = useState(null); // Cache template for offline use
+  const [isOffline, setIsOffline] = useState(!navigator.onLine); // Track online status
 
   // Fallback API URL if environment variable is not set
   const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
+  // Monitor network status for offline handling
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOffline(false);
+      console.log('🌐 Network connection restored');
+    };
+
+    const handleOffline = () => {
+      setIsOffline(true);
+      console.warn('📵 Network connection lost - using cached data');
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
 
 
@@ -46,8 +90,9 @@ export default function CapturePage() {
       ctx.textBaseline = 'top';
 
       // Apply template background if available (this is the colorful design)
-      if (settings.template) {
-        console.log('🖼️ Loading template:', settings.template.substring(0, 50) + '...');
+      if (settings.template || cachedTemplate) {
+        const templateToUse = settings.template || cachedTemplate;
+        console.log('🖼️ Loading template:', templateToUse.substring(0, 50) + '...');
         const templateImg = new Image();
         templateImg.crossOrigin = 'anonymous'; // Enable CORS for Cloudinary images
         templateImg.onload = () => {
@@ -58,22 +103,63 @@ export default function CapturePage() {
           addBeautifulText(ctx);
         };
         templateImg.onerror = () => {
-          console.error('❌ Failed to load template image');
-          // Fallback to transparent background (no white layer)
-          ctx.clearRect(0, 0, width, height);
-          // Add beautiful text even on fallback
-          addBeautifulText(ctx);
+          console.error('❌ Failed to load template image, trying fallback');
+          // Try cached template if main template fails
+          if (settings.template && cachedTemplate && settings.template !== cachedTemplate) {
+            console.log('🔄 Trying cached template as fallback');
+            const fallbackImg = new Image();
+            fallbackImg.crossOrigin = 'anonymous';
+            fallbackImg.onload = () => {
+              console.log('✅ Cached template loaded as fallback');
+              ctx.drawImage(fallbackImg, 0, 0, width, height);
+              addBeautifulText(ctx);
+            };
+            fallbackImg.onerror = () => {
+              console.error('❌ Cached template also failed, using default background');
+              createDefaultBackground(ctx, width, height);
+              addBeautifulText(ctx);
+            };
+            fallbackImg.src = cachedTemplate;
+          } else {
+            console.log('💡 Creating default background instead of blank canvas');
+            createDefaultBackground(ctx, width, height);
+            addBeautifulText(ctx);
+          }
         };
-        templateImg.src = settings.template;
+        templateImg.src = templateToUse;
       } else {
-        console.log('⚠️ No template found, using transparent background');
-        // Fallback: transparent background if no template (no white layer)
-        ctx.clearRect(0, 0, width, height);
-        // Add beautiful text on transparent background
+        console.log('⚠️ No template found, creating default background');
+        createDefaultBackground(ctx, width, height);
         addBeautifulText(ctx);
       }
     }
-  }, [settings.template]);
+  }, [settings.template, cachedTemplate]);
+
+  // Create a default background when no template is available
+  const createDefaultBackground = useCallback((ctx, width, height) => {
+    console.log('🎨 Creating default background to prevent blank strips');
+
+    // Create a beautiful gradient background instead of blank canvas
+    const gradient = ctx.createLinearGradient(0, 0, 0, height);
+    gradient.addColorStop(0, '#667eea');    // Purple-blue top
+    gradient.addColorStop(0.5, '#764ba2');  // Purple middle
+    gradient.addColorStop(1, '#f093fb');    // Pink bottom
+
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, width, height);
+
+    // Add subtle pattern overlay
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+    for (let i = 0; i < width; i += 40) {
+      for (let j = 0; j < height; j += 40) {
+        if ((i + j) % 80 === 0) {
+          ctx.fillRect(i, j, 20, 20);
+        }
+      }
+    }
+
+    console.log('✅ Default background created - no more blank strips!');
+  }, []);
 
   // Load settings from backend API
   const loadSettings = useCallback(async () => {
@@ -98,6 +184,13 @@ export default function CapturePage() {
       console.log('✅ Backend settings loaded successfully');
       setSettings(backendSettings);
 
+      // Cache template for offline use
+      if (backendSettings.template) {
+        setCachedTemplate(backendSettings.template);
+        localStorage.setItem('cachedTemplate', backendSettings.template);
+        console.log('💾 Template cached for offline use');
+      }
+
       // Template loaded silently - no notification shown
     } catch (error) {
       console.error('❌ Error loading settings from backend:', error);
@@ -105,10 +198,26 @@ export default function CapturePage() {
       // Fallback to localStorage if backend fails
       try {
         const savedSettings = localStorage.getItem('photoBoothSettings');
+        const savedTemplate = localStorage.getItem('cachedTemplate');
+
         if (savedSettings) {
           const parsedSettings = JSON.parse(savedSettings);
+          // Use cached template if available and current template is missing
+          if (savedTemplate && !parsedSettings.template) {
+            parsedSettings.template = savedTemplate;
+            console.log('💾 Using cached template from offline storage');
+          }
           console.log('⚠️ Using localStorage fallback:', parsedSettings);
           setSettings(parsedSettings);
+          setCachedTemplate(savedTemplate);
+        } else if (savedTemplate) {
+          // Even if no settings, use cached template
+          console.log('💾 Using cached template only');
+          setSettings({
+            eventName: '',
+            template: savedTemplate
+          });
+          setCachedTemplate(savedTemplate);
         } else {
           console.log('⚠️ No fallback settings found, using defaults');
           setSettings({
@@ -118,10 +227,13 @@ export default function CapturePage() {
         }
       } catch (fallbackError) {
         console.error('❌ Fallback also failed:', fallbackError);
+        // Try to use cached template even if parsing fails
+        const savedTemplate = localStorage.getItem('cachedTemplate');
         setSettings({
           eventName: '',
-          template: null
+          template: savedTemplate || null
         });
+        setCachedTemplate(savedTemplate);
       }
     }
   }, [API_BASE_URL]);
@@ -515,7 +627,7 @@ export default function CapturePage() {
     takePhoto();
   };
 
-  const takePhoto = () => {
+  const takePhoto = async () => {
     console.log('📸 Starting photo capture process...');
 
     // Validate video and canvas are ready
@@ -524,6 +636,19 @@ export default function CapturePage() {
       setNotification({
         type: "error",
         message: "Camera not ready. Please wait and try again."
+      });
+      return;
+    }
+
+    // Wait 500ms before drawing to canvas to ensure everything is ready
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    // Double-check canvas is still ready after delay
+    if (!canvasRef.current) {
+      console.error('❌ Canvas not ready after delay');
+      setNotification({
+        type: "error",
+        message: "Canvas not ready. Please try again."
       });
       return;
     }
@@ -666,6 +791,9 @@ export default function CapturePage() {
       const templateImg = new Image();
       templateImg.crossOrigin = 'anonymous'; // Enable CORS for Cloudinary images
       templateImg.onload = () => {
+        // Ensure canvas is still ready before drawing
+        if (!canvasRef.current) return;
+
         // First: Draw template background to fill entire canvas (preserves gradient)
         ctx.drawImage(templateImg, 0, 0, 660, 1800);
 
@@ -675,6 +803,9 @@ export default function CapturePage() {
           const photoImg = new Image();
           photoImg.crossOrigin = 'anonymous'; // Enable CORS for photo data URLs
           photoImg.onload = () => {
+            // Ensure canvas is still ready before drawing
+            if (!canvasRef.current) return;
+
             // Draw photo exactly within box boundaries
             ctx.drawImage(photoImg, 0, 0, photoWidth, photoHeight, photo.x, photo.y, photoWidth, photoHeight);
             photosLoaded++;
@@ -694,17 +825,14 @@ export default function CapturePage() {
       };
 
       templateImg.onerror = () => {
-        console.error('❌ Failed to load template for photo placement');
-        setNotification({
-          type: "error",
-          message: "Template failed to load. Using fallback."
-        });
-        // Fallback to no template
+        console.error('❌ Failed to load template for photo placement, using default background');
+        // Use default background instead of blank canvas
         try {
-          ctx.clearRect(0, 0, 660, 1800);
+          createDefaultBackground(ctx, 660, 1800);
           // Draw photo exactly within box boundaries
           ctx.drawImage(tempCanvas, 0, 0, photoWidth, photoHeight, photoX, photoY, photoWidth, photoHeight);
           addBeautifulText(ctx);
+          console.log('✅ Photo placed on default background - no blank strip!');
         } catch (error) {
           console.error('❌ Error in template fallback:', error);
         }
@@ -712,8 +840,9 @@ export default function CapturePage() {
 
       templateImg.src = settings.template;
     } else {
-      // If no template, draw photo and add text on transparent background
-      ctx.clearRect(0, 0, 660, 1800);
+      // If no template, use default background instead of transparent
+      console.log('📸 No template available, using default background for photo');
+      createDefaultBackground(ctx, 660, 1800);
       // Draw photo exactly within box boundaries
       ctx.drawImage(tempCanvas, 0, 0, photoWidth, photoHeight, photoX, photoY, photoWidth, photoHeight);
       addBeautifulText(ctx);
@@ -746,10 +875,19 @@ export default function CapturePage() {
     try {
       setIsSubmitting(true);
       setNotification(null);
+      setRetryStatus(null); // Clear any previous retry status
 
       // Validate canvas has content before submitting
       if (!canvasRef.current) {
         throw new Error('Canvas not available');
+      }
+
+      // Wait a moment to ensure canvas is fully ready
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Double-check canvas is still ready
+      if (!canvasRef.current) {
+        throw new Error('Canvas not ready after delay');
       }
 
       const dataUrl = canvasRef.current.toDataURL("image/jpeg", 0.8);
@@ -761,12 +899,31 @@ export default function CapturePage() {
 
       console.log(`📤 Submitting photo strip, data size: ${(dataUrl.length / 1024).toFixed(1)}KB`);
 
-      await axios.post(`${API_BASE_URL}/api/strips`, {
+      // Create a custom axios instance for this upload with retry status updates
+      const uploadAxios = axios.create();
+
+      // Configure retry with status updates for this specific request
+      axiosRetry(uploadAxios, {
+        retries: 3,
+        retryDelay: (retryCount, error) => {
+          console.warn(`🔄 Upload retry ${retryCount}/3 due to:`, error.message);
+          setRetryStatus(`Retrying upload (${retryCount}/3)...`);
+          return axiosRetry.exponentialDelay(retryCount);
+        },
+        retryCondition: (error) => {
+          // Smart retry: Only retry on network errors and 5xx server errors
+          return axiosRetry.isNetworkOrIdempotentRequestError(error) ||
+                 (error.response && error.response.status >= 500);
+        }
+      });
+
+      await uploadAxios.post(`${API_BASE_URL}/api/strips`, {
         image: dataUrl,
         eventName: settings.eventName,
         template: settings.template
       });
 
+      setRetryStatus(null); // Clear retry status on success
       setNotification({
         type: "success",
         message: "✅ Thank you! Your photo strip has been sent for print."
@@ -776,10 +933,30 @@ export default function CapturePage() {
       setCapturedPhotos([]); // Clear captured photos
       initializeCanvas(); // Clear and reinitialize with background
     } catch (error) {
-      console.warn("Upload failed:", error);
+      console.error("❌ Upload failed after retries:", {
+        error: error.message,
+        url: error.config?.url,
+        status: error.response?.status,
+        data: error.config?.data ? 'Photo data present' : 'No data'
+      });
+
+      setRetryStatus(null); // Clear retry status on final failure
+
+      // Provide specific error messages based on error type
+      let errorMessage = "❌ Upload failed. Please try again.";
+      if (error.code === 'ECONNABORTED') {
+        errorMessage = "❌ Upload timed out. Please check your connection and try again.";
+      } else if (error.response?.status === 413) {
+        errorMessage = "❌ Photo too large. Please try again.";
+      } else if (error.response?.status >= 500) {
+        errorMessage = "❌ Server error. Please try again in a moment.";
+      } else if (!navigator.onLine) {
+        errorMessage = "❌ No internet connection. Please check your network.";
+      }
+
       setNotification({
         type: "error",
-        message: "❌ Failed to upload. Please check your connection and try again."
+        message: errorMessage
       });
     } finally {
       setIsSubmitting(false);
@@ -992,7 +1169,7 @@ export default function CapturePage() {
                   {isSubmitting ? (
                     <>
                       <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                      <span>Creating Strip...</span>
+                      <span>{retryStatus || "Creating Strip..."}</span>
                     </>
                   ) : (
                     <>
