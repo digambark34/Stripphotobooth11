@@ -1106,7 +1106,7 @@ export default function CapturePage() {
 
       <div className="relative z-10 container mx-auto px-2 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 md:py-8 lg:py-12">
         {/* Header - Compact on Mobile */}
-        <div className="text-center mb-4 sm:mb-8 md:mb-12 lg:mb-16">
+        <div className="text-center mb-4 sm:mb-6 md:mb-8 lg:mb-10 desktop-header">
           <div className="inline-block p-4 sm:p-6 bg-white/10 backdrop-blur-lg rounded-2xl sm:rounded-3xl border border-white/20 shadow-2xl mb-4 sm:mb-6 relative mobile-header">
             <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-black text-white mb-2 sm:mb-3 bg-gradient-to-r from-white via-purple-200 to-pink-200 bg-clip-text text-transparent">
               📸 Strip Photobooth
@@ -1157,6 +1157,8 @@ export default function CapturePage() {
             {/* Frame overlay to help users stay in frame */}
             <div className="absolute inset-2 border-2 border-white/30 rounded-lg pointer-events-none"></div>
 
+
+
             {/* Camera Switching Indicator */}
             {isSwitchingCamera && (
               <div className="absolute inset-0 flex items-center justify-center bg-black/80 backdrop-blur-sm rounded-2xl">
@@ -1185,14 +1187,12 @@ export default function CapturePage() {
                 </div>
               )}
 
-
-
-            {/* Enhanced Progress indicator */}
-            <div className="mt-4 sm:mt-6 flex justify-center space-x-4 sm:space-x-3">
+            {/* Progress Indicators - Top/Mid/Bot above capture button */}
+            <div className="mt-6 sm:mt-8 mb-4 sm:mb-6 flex justify-center space-x-6 sm:space-x-8">
                 {[1, 2, 3].map((step) => (
                   <div key={step} className="flex flex-col items-center space-y-2">
                     <div
-                      className={`w-5 h-5 sm:w-4 sm:h-4 md:w-5 md:h-5 rounded-full border-2 transition-all duration-500 ${
+                      className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 transition-all duration-500 ${
                         steps >= step
                           ? 'bg-gradient-to-r from-green-400 to-emerald-400 border-green-300 shadow-lg shadow-green-400/50'
                           : steps + 1 === step
@@ -1200,8 +1200,8 @@ export default function CapturePage() {
                           : 'bg-white/10 border-white/30'
                       }`}
                     />
-                    <span className={`text-xs sm:text-xs font-medium transition-colors duration-300 ${
-                      steps >= step ? 'text-green-300' : steps + 1 === step ? 'text-blue-300' : 'text-white/50'
+                    <span className={`text-sm sm:text-base font-medium transition-colors duration-300 ${
+                      steps >= step ? 'text-green-300' : steps + 1 === step ? 'text-blue-300' : 'text-white/70'
                     }`}>
                       {step === 1 ? 'Top' : step === 2 ? 'Mid' : 'Bot'}
                     </span>
@@ -1210,7 +1210,7 @@ export default function CapturePage() {
             </div>
 
             {/* Enhanced Capture Button - Mobile Optimized */}
-            <div className="mt-6 sm:mt-8 mobile-controls">
+            <div className="mt-2 sm:mt-3 mobile-controls desktop-capture-spacing">
               <button
                 onClick={startCapture}
                 disabled={steps >= 3 || isProcessing}
@@ -1236,8 +1236,35 @@ export default function CapturePage() {
               </button>
             </div>
 
+            {/* Submit Strip Button */}
+            <div className="mt-6 sm:mt-8 mobile-controls desktop-submit-spacing">
+              <button
+                onClick={submit}
+                disabled={steps < 3 || isSubmitting}
+                className={`w-full py-4 sm:py-5 px-6 rounded-2xl font-bold text-lg sm:text-xl transition-all duration-300 transform relative overflow-hidden mobile-button ${
+                  steps >= 3 && !isSubmitting
+                    ? 'bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500 hover:from-emerald-600 hover:via-green-600 hover:to-teal-600 text-white shadow-2xl hover:shadow-emerald-500/25 hover:scale-105 active:scale-95'
+                    : 'bg-gradient-to-r from-gray-600 to-gray-700 text-gray-400 cursor-not-allowed'
+                }`}
+              >
+                <div className="relative z-10 flex items-center justify-center space-x-3">
+                  {isSubmitting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                      <span>{retryStatus || "Creating Strip..."}</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-2xl">🚀</span>
+                      <span>Submit Strip</span>
+                    </>
+                  )}
+                </div>
+              </button>
+            </div>
+
             {/* Camera Switch Button - Mobile Optimized */}
-            <div className="mt-4 sm:mt-5 mobile-controls">
+            <div className="mt-4 sm:mt-5 mobile-controls desktop-switch-spacing">
               <button
                 onClick={switchCamera}
                 disabled={isProcessing || isSwitchingCamera}
@@ -1266,44 +1293,7 @@ export default function CapturePage() {
               </button>
             </div>
 
-            {/* Enhanced Submit Section */}
-            <div className="mt-6 pt-4 border-t border-gradient-to-r from-transparent via-white/20 to-transparent mobile-controls">
-              <div className="text-center mb-6">
-                <div className="inline-block bg-white/10 backdrop-blur-lg rounded-2xl px-6 py-3 border border-white/20">
-                  <p className="text-white/90 text-sm sm:text-base font-medium">
-                    {steps >= 3 ? '🎉 Ready to create your strip!' : `📷 ${3 - steps} more photo${3 - steps > 1 ? 's' : ''} needed`}
-                  </p>
-                  {settings.eventName && (
-                    <p className="text-purple-300 text-xs sm:text-sm mt-2 font-medium">🎊 {settings.eventName}</p>
-                  )}
-                </div>
-              </div>
 
-              {/* Enhanced Submit Button */}
-              <button
-                onClick={submit}
-                disabled={steps < 3 || isSubmitting}
-                className={`w-full py-4 sm:py-5 px-6 rounded-2xl font-bold text-lg sm:text-xl transition-all duration-300 transform relative overflow-hidden mobile-button ${
-                  steps >= 3 && !isSubmitting
-                    ? 'bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500 hover:from-emerald-600 hover:via-green-600 hover:to-teal-600 text-white shadow-2xl hover:shadow-emerald-500/25 hover:scale-105 active:scale-95'
-                    : 'bg-gradient-to-r from-gray-600 to-gray-700 text-gray-400 cursor-not-allowed'
-                }`}
-              >
-                <div className="relative z-10 flex items-center justify-center space-x-3">
-                  {isSubmitting ? (
-                    <>
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                      <span>{retryStatus || "Creating Strip..."}</span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="text-2xl">🚀</span>
-                      <span>Submit Strip</span>
-                    </>
-                  )}
-                </div>
-              </button>
-            </div>
           </div>
 
           {/* Preview Canvas (hidden) */}
