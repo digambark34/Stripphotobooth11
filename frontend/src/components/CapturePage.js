@@ -1133,7 +1133,7 @@ export default function CapturePage() {
         </div>
 
         {/* Enhanced Camera Section - Full Screen on Mobile */}
-        <div className="w-full max-w-none sm:max-w-lg md:max-w-2xl lg:max-w-4xl mx-auto px-4 sm:px-6">
+        <div className="w-full max-w-none sm:max-w-lg md:max-w-2xl lg:max-w-4xl mx-auto px-2 sm:px-6 mobile-camera-section">
           <div className="relative">
 
 
