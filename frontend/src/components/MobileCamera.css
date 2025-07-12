@@ -40,8 +40,16 @@
   }
 }
 
-/* Mobile-first responsive design */
+/* Mobile-first responsive design - Bigger camera area for multiple people */
 @media (max-width: 640px) {
+  .mobile-camera-video {
+    height: 60vh !important;
+    min-height: 400px !important;
+    width: calc(100% + 40px) !important;
+    margin-left: -20px !important;
+    margin-right: -20px !important;
+  }
+
   .mobile-header {
     padding: 12px !important;
     margin-bottom: 16px !important;
@@ -53,8 +61,9 @@
   }
 
   .mobile-controls {
-    padding: 12px 8px !important;
-    gap: 12px !important;
+    padding: 8px !important;
+    gap: 8px !important;
+    margin-top: 12px !important;
   }
 
   .mobile-button {

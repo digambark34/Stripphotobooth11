@@ -1145,9 +1145,9 @@ export default function CapturePage() {
               className="w-full rounded-lg shadow-2xl border-2 border-white/20 mobile-camera-video"
               style={{
                 width: '100%',
-                height: '50vh', // Mobile: compact height
-                minHeight: '350px', // Desktop: larger minimum height
-                maxHeight: '45vh', // Desktop: larger maximum height
+                height: '60vh', // Mobile: bigger height for multiple people
+                minHeight: '400px', // Mobile: larger minimum height
+                maxHeight: '60vh', // Mobile: larger maximum height
                 objectFit: 'contain',
                 transform: 'scale(1.1)',
                 transformOrigin: 'top center'
@@ -1210,7 +1210,7 @@ export default function CapturePage() {
             </div>
 
             {/* Enhanced Capture Button - Mobile Optimized */}
-            <div className="mt-10 sm:mt-12 mobile-controls">
+            <div className="mt-6 sm:mt-8 mobile-controls">
               <button
                 onClick={startCapture}
                 disabled={steps >= 3 || isProcessing}
@@ -1237,7 +1237,7 @@ export default function CapturePage() {
             </div>
 
             {/* Camera Switch Button - Mobile Optimized */}
-            <div className="mt-8 sm:mt-10 mobile-controls">
+            <div className="mt-4 sm:mt-5 mobile-controls">
               <button
                 onClick={switchCamera}
                 disabled={isProcessing || isSwitchingCamera}
@@ -1267,7 +1267,7 @@ export default function CapturePage() {
             </div>
 
             {/* Enhanced Submit Section */}
-            <div className="mt-8 pt-6 border-t border-gradient-to-r from-transparent via-white/20 to-transparent mobile-controls">
+            <div className="mt-6 pt-4 border-t border-gradient-to-r from-transparent via-white/20 to-transparent mobile-controls">
               <div className="text-center mb-6">
                 <div className="inline-block bg-white/10 backdrop-blur-lg rounded-2xl px-6 py-3 border border-white/20">
                   <p className="text-white/90 text-sm sm:text-base font-medium">
