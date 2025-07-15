@@ -700,7 +700,7 @@ export default function CapturePage() {
     return isReady;
   }, []);
 
-  // Mobile camera capture function
+  // Mobile camera capture function - SAME WORKFLOW AS LIVE CAMERA
   const handleMobileCameraCapture = async (e) => {
     console.log('📱 Mobile camera capture triggered', e);
     const file = e.target.files[0];
@@ -726,23 +726,16 @@ export default function CapturePage() {
 
       img.onload = async () => {
         try {
-          // Process the captured image similar to takePhoto function
+          // Process mobile image exactly like live camera
           await processMobileCapturedImage(img);
 
           // Clean up object URL
           URL.revokeObjectURL(imageURL);
 
-          // Move to next step
-          setSteps(prev => prev + 1);
-
-          console.log(`✅ Mobile photo ${steps + 1} captured successfully`);
-
-          // Show "Next Photo" message after capture (except for the last photo)
-          if (steps < 2) {
-            setShowNextPhotoMessage(true);
-            setTimeout(() => {
-              setShowNextPhotoMessage(false);
-            }, 1500);
+          // Clear the file input to allow new captures
+          const input = document.getElementById('mobileCameraInput');
+          if (input) {
+            input.value = '';
           }
 
         } catch (error) {
@@ -778,91 +771,151 @@ export default function CapturePage() {
     }
   };
 
-  // Process mobile captured image to fit photo box
+  // Process mobile captured image - EXACT SAME WORKFLOW AS LIVE CAMERA
   const processMobileCapturedImage = async (img) => {
+    console.log('📱 Starting mobile photo processing...');
+
+    // Validate canvas is ready
     if (!canvasRef.current) {
       throw new Error('Canvas not ready');
     }
 
+    // Wait 500ms before processing to ensure everything is ready (same as live camera)
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    // Double-check canvas is still ready after delay
+    if (!canvasRef.current) {
+      throw new Error('Canvas not ready after delay');
+    }
+
+    // Photo frames - MUST match live camera dimensions exactly
     const photoWidth = 520;    // Match white box width exactly
     const photoHeight = 385;   // Match white box height exactly
     const photoX = (660 - photoWidth) / 2; // Center the photo boxes
 
-    // Y positions - increased gaps further, equal spacing maintained
+    // Y positions - same as live camera
     const photoPositions = [
-      90,   // First photo box Y position (unchanged)
-      515,  // Second photo box Y position (increased gap further)
-      940   // Third photo box Y position (increased gap further)
+      90,   // First photo box Y position
+      515,  // Second photo box Y position
+      940   // Third photo box Y position
     ];
 
     const photoY = photoPositions[steps] || photoPositions[0];
 
-    // Create temporary canvas for processing the mobile image
+    // Create temporary canvas for processing (same as live camera)
     const tempCanvas = document.createElement('canvas');
     tempCanvas.width = photoWidth;
     tempCanvas.height = photoHeight;
+
+    // Ensure consistent scaling across environments
+    tempCanvas.style.width = photoWidth + 'px';
+    tempCanvas.style.height = photoHeight + 'px';
+
     const tempCtx = tempCanvas.getContext('2d');
 
-    // Calculate scaling to fit image in photo box while maintaining aspect ratio
-    const imgAspect = img.width / img.height;
-    const boxAspect = photoWidth / photoHeight;
+    // Disable image smoothing for consistent pixel-perfect rendering
+    tempCtx.imageSmoothingEnabled = false;
 
-    let sourceX = 0, sourceY = 0, sourceWidth = img.width, sourceHeight = img.height;
+    try {
+      // Get mobile image dimensions
+      const imgWidth = img.width || img.naturalWidth;
+      const imgHeight = img.height || img.naturalHeight;
 
-    if (imgAspect > boxAspect) {
-      // Image is wider - crop sides
-      sourceWidth = img.height * boxAspect;
-      sourceX = (img.width - sourceWidth) / 2;
-    } else {
-      // Image is taller - crop top/bottom
-      sourceHeight = img.width / boxAspect;
-      sourceY = (img.height - sourceHeight) / 2;
+      // Validate image dimensions
+      if (!imgWidth || !imgHeight || imgWidth < 100 || imgHeight < 100) {
+        throw new Error('Invalid mobile image dimensions');
+      }
+
+      // Smart cropping logic (same as live camera)
+      const imgAspect = imgWidth / imgHeight;
+      const boxAspect = photoWidth / photoHeight;
+
+      let sourceX = 0, sourceY = 0, sourceWidth = imgWidth, sourceHeight = imgHeight;
+
+      if (imgAspect > boxAspect) {
+        // Image is wider than box - crop sides
+        sourceWidth = imgHeight * boxAspect;
+        sourceX = (imgWidth - sourceWidth) / 2;
+      } else {
+        // Image is taller than box - crop bottom only (same as live camera)
+        sourceHeight = imgWidth / boxAspect;
+        sourceY = 0; // Keep top, crop bottom
+      }
+
+      // Draw cropped mobile image to fill entire box without stretching
+      tempCtx.drawImage(
+        img,
+        sourceX, sourceY, sourceWidth, sourceHeight, // Source: Cropped portion
+        0, 0, photoWidth, photoHeight // Destination: Fill entire box
+      );
+
+      console.log(`📱 Mobile photo processed with smart crop - Image: ${imgWidth}x${imgHeight}, Cropped: ${sourceWidth}x${sourceHeight}, Box: ${photoWidth}x${photoHeight}`);
+    } catch (error) {
+      console.error('❌ Error processing mobile image:', error);
+      throw new Error('Failed to process mobile image');
     }
 
-    // Draw cropped and scaled image to temp canvas
-    tempCtx.drawImage(
-      img,
-      sourceX, sourceY, sourceWidth, sourceHeight,
-      0, 0, photoWidth, photoHeight
-    );
-
-    // Store the captured photo data
-    const capturedPhotoData = tempCanvas.toDataURL('image/jpeg', 0.9);
-    if (!capturedPhotoData || capturedPhotoData.length < 1000) {
-      throw new Error('Photo data too small or empty');
+    // Store the captured photo data for redrawing with template
+    let capturedPhotoData;
+    try {
+      // Convert to WebP format for faster loading (same as live camera)
+      capturedPhotoData = tempCanvas.toDataURL('image/webp', 0.8);
+      if (!capturedPhotoData || capturedPhotoData.length < 1000) {
+        throw new Error('Mobile photo data too small or empty');
+      }
+    } catch (error) {
+      console.error('❌ Error converting mobile photo to data URL:', error);
+      throw new Error('Failed to process mobile photo');
     }
 
-    // Update captured photos array
+    // Store in same format as live camera
     const newCapturedPhotos = [...capturedPhotos, {
-      step: steps,
-      data: capturedPhotoData
+      data: capturedPhotoData,
+      x: photoX,
+      y: photoY
     }];
     setCapturedPhotos(newCapturedPhotos);
+    console.log(`✅ Mobile photo ${steps + 1} captured successfully, data size: ${(capturedPhotoData.length / 1024).toFixed(1)}KB`);
 
-    // Redraw canvas with template and all photos
+    // Redraw everything: template background + all photos + beautiful text (SAME AS LIVE CAMERA)
     const ctx = canvasRef.current.getContext('2d');
 
     if (settings.template) {
       const templateImg = new Image();
+      templateImg.crossOrigin = 'anonymous'; // Enable CORS for Cloudinary images
       templateImg.onload = () => {
-        // Clear and draw template
-        ctx.clearRect(0, 0, 660, 1800);
+        // Ensure canvas is still ready before drawing
+        if (!canvasRef.current) return;
+
+        // First: Draw template background to fill entire canvas (preserves gradient)
         ctx.drawImage(templateImg, 0, 0, 660, 1800);
 
-        // Draw all captured photos
+        // Then: Draw all captured photos on top (preserves template in gaps)
         let photosLoaded = 0;
         let photosErrored = 0;
 
+        if (newCapturedPhotos.length === 0) {
+          console.warn('⚠️ No mobile photos to draw on canvas');
+          addBeautifulText(ctx);
+          return;
+        }
+
         newCapturedPhotos.forEach((photo, index) => {
           const photoImg = new Image();
+          photoImg.crossOrigin = 'anonymous'; // Enable CORS for mobile photos
           photoImg.onload = () => {
-            const photoPosition = photoPositions[photo.step] || photoPositions[0];
-            ctx.drawImage(photoImg, 0, 0, photoWidth, photoHeight, photoX, photoPosition, photoWidth, photoHeight);
-            photosLoaded++;
+            // Ensure canvas is still ready before drawing
+            if (!canvasRef.current) return;
 
+            // Draw photo exactly within box boundaries
+            ctx.drawImage(photoImg, 0, 0, photoWidth, photoHeight, photo.x, photo.y, photoWidth, photoHeight);
+            photosLoaded++;
+            console.log(`✅ Mobile photo ${index + 1}/${newCapturedPhotos.length} drawn to canvas`);
+
+            // After all photos are loaded, add beautiful text
             if (photosLoaded + photosErrored === newCapturedPhotos.length) {
               addBeautifulText(ctx);
-              setIsCanvasReady(true);
+              setIsCanvasReady(true); // Mark canvas as ready
               console.log('✅ All mobile photos processed, text added, canvas ready');
             }
           };
@@ -871,9 +924,10 @@ export default function CapturePage() {
             console.error(`❌ Failed to load mobile photo ${index + 1} for canvas`);
             photosErrored++;
 
+            // Continue even if some photos fail
             if (photosLoaded + photosErrored === newCapturedPhotos.length) {
               addBeautifulText(ctx);
-              setIsCanvasReady(true);
+              setIsCanvasReady(true); // Mark canvas as ready
               console.log('✅ All mobile photos processed (some failed), text added, canvas ready');
             }
           };
@@ -881,19 +935,46 @@ export default function CapturePage() {
           photoImg.src = photo.data;
         });
 
+        // If no photos yet, still add text
         if (newCapturedPhotos.length === 0) {
           addBeautifulText(ctx);
         }
       };
 
+      templateImg.onerror = () => {
+        console.error('❌ Failed to load template for mobile photo');
+        // Fallback to default background
+        createDefaultBackground(ctx, 660, 1800);
+        ctx.drawImage(tempCanvas, 0, 0, photoWidth, photoHeight, photoX, photoY, photoWidth, photoHeight);
+        addBeautifulText(ctx);
+      };
+
       templateImg.src = settings.template;
     } else {
-      // No template - use default background
+      // If no template, use default background instead of transparent
       console.log('📱 No template available, using default background for mobile photo');
       createDefaultBackground(ctx, 660, 1800);
+      // Draw photo exactly within box boundaries
       ctx.drawImage(tempCanvas, 0, 0, photoWidth, photoHeight, photoX, photoY, photoWidth, photoHeight);
       addBeautifulText(ctx);
     }
+
+    // Move to next step (same as live camera)
+    setSteps(prev => prev + 1);
+
+    // Show "Next Photo" message after capture (except for the last photo)
+    if (steps < 2) {
+      setShowNextPhotoMessage(true);
+      setTimeout(() => {
+        setShowNextPhotoMessage(false);
+      }, 1500); // Show for 1.5 seconds
+    }
+
+    // Processing delay between captures (same as live camera)
+    setTimeout(() => {
+      setIsProcessing(false);
+      console.log('✅ Mobile photo processing complete, ready for next capture');
+    }, 2000); // 2 second delay between captures
 
     console.log(`📱 Mobile photo processed and placed in box ${steps + 1}`);
   };
@@ -1205,6 +1286,11 @@ export default function CapturePage() {
     try {
       setIsSubmitting(true);
       setNotification(null);
+
+      console.log('🚀 Starting strip submission...');
+      console.log('📊 Captured photos count:', capturedPhotos.length);
+      console.log('🎨 Template available:', !!settings.template);
+      console.log('📝 Event name:', settings.eventName);
       setRetryStatus(null); // Clear any previous retry status
 
       // Validate canvas has content before submitting
@@ -1223,25 +1309,128 @@ export default function CapturePage() {
 
       // Validate canvas has actual content (not just blank)
       const ctx = canvasRef.current.getContext('2d');
-      const imageData = ctx.getImageData(0, 0, canvasRef.current.width, canvasRef.current.height);
-      const pixels = imageData.data;
 
-      // Check if canvas has non-transparent pixels
       let hasContent = false;
-      for (let i = 3; i < pixels.length; i += 4) { // Check alpha channel every 4th byte
-        if (pixels[i] > 0) { // If alpha > 0, there's content
-          hasContent = true;
-          break;
+      let imageData = null;
+
+      try {
+        imageData = ctx.getImageData(0, 0, canvasRef.current.width, canvasRef.current.height);
+        const pixels = imageData.data;
+
+        // Check if canvas has non-transparent pixels
+        for (let i = 3; i < pixels.length; i += 4) { // Check alpha channel every 4th byte
+          if (pixels[i] > 0) { // If alpha > 0, there's content
+            hasContent = true;
+            break;
+          }
         }
+      } catch (error) {
+        console.warn('⚠️ Canvas tainted, cannot validate content with getImageData:', error.message);
+        console.log('🔍 Canvas taint debug info:', {
+          hasTemplate: !!settings.template,
+          templateUrl: settings.template ? settings.template.substring(0, 100) + '...' : 'none',
+          capturedPhotosCount: capturedPhotos.length,
+          useMobileCamera: useMobileCamera
+        });
+        // If canvas is tainted, assume it has content if we have captured photos
+        hasContent = capturedPhotos.length > 0;
+        console.log(`📊 Assuming content based on captured photos: ${hasContent}`);
       }
 
       if (!hasContent) {
+        console.error('❌ Canvas appears to be blank');
+        console.log('🔍 Canvas debug info:', {
+          width: canvasRef.current.width,
+          height: canvasRef.current.height,
+          capturedPhotosCount: capturedPhotos.length,
+          isCanvasReady: isCanvasReady,
+          hasTemplate: !!settings.template
+        });
+
+        // Try to force redraw the canvas
+        console.log('🔄 Attempting to redraw canvas...');
+        if (capturedPhotos.length > 0) {
+          // Force redraw with current photos
+          const ctx = canvasRef.current.getContext('2d');
+          if (settings.template) {
+            const templateImg = new Image();
+            templateImg.crossOrigin = 'anonymous'; // Enable CORS for template
+            templateImg.onload = () => {
+              ctx.clearRect(0, 0, 660, 1800);
+              ctx.drawImage(templateImg, 0, 0, 660, 1800);
+
+              // Redraw all photos
+              capturedPhotos.forEach((photo, index) => {
+                const photoImg = new Image();
+                photoImg.crossOrigin = 'anonymous'; // Enable CORS for mobile photos
+                photoImg.onload = () => {
+                  ctx.drawImage(photoImg, 0, 0, 520, 385, photo.x, photo.y, 520, 385);
+                  console.log(`🔄 Redrawn photo ${index + 1} at x:${photo.x}, y:${photo.y}`);
+                };
+                photoImg.src = photo.data;
+              });
+
+              addBeautifulText(ctx);
+            };
+            templateImg.src = settings.template;
+          }
+        }
+
         throw new Error('Canvas appears to be blank - no photos detected');
       }
 
       console.log('✅ Canvas validation passed - content detected');
 
-      const dataUrl = canvasRef.current.toDataURL("image/jpeg", 0.8);
+      let dataUrl;
+      try {
+        dataUrl = canvasRef.current.toDataURL("image/jpeg", 0.8);
+      } catch (error) {
+        console.error('❌ Canvas tainted, attempting to create clean canvas:', error.message);
+
+        // Create a new clean canvas and redraw everything
+        try {
+          const cleanCanvas = document.createElement('canvas');
+          cleanCanvas.width = 660;
+          cleanCanvas.height = 1800;
+          const cleanCtx = cleanCanvas.getContext('2d');
+
+          console.log('🔄 Creating clean canvas for mobile photos...');
+
+          // Draw default background
+          createDefaultBackground(cleanCtx, 660, 1800);
+
+          // Draw all captured photos synchronously
+          const photoPromises = capturedPhotos.map((photo, index) => {
+            return new Promise((resolve) => {
+              const photoImg = new Image();
+              photoImg.onload = () => {
+                cleanCtx.drawImage(photoImg, 0, 0, 520, 385, photo.x, photo.y, 520, 385);
+                console.log(`✅ Clean canvas: photo ${index + 1} drawn at x:${photo.x}, y:${photo.y}`);
+                resolve();
+              };
+              photoImg.onerror = () => {
+                console.error(`❌ Failed to load photo ${index + 1} for clean canvas`);
+                resolve();
+              };
+              photoImg.src = photo.data;
+            });
+          });
+
+          // Wait for all photos to be drawn
+          await Promise.all(photoPromises);
+
+          // Add text
+          addBeautifulText(cleanCtx);
+
+          // Extract data from clean canvas
+          dataUrl = cleanCanvas.toDataURL("image/jpeg", 0.8);
+          console.log('✅ Clean canvas created successfully');
+
+        } catch (cleanError) {
+          console.error('❌ Failed to create clean canvas:', cleanError.message);
+          throw new Error('Canvas is tainted and clean canvas creation failed. Please refresh and try again.');
+        }
+      }
 
       // Validate the generated image data
       if (!dataUrl || dataUrl.length < 10000) {
