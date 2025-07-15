@@ -28,6 +28,7 @@ export default function CapturePage() {
   const [steps, setSteps] = useState(0);
   const [currentCamera, setCurrentCamera] = useState('environment'); // 'user' for front, 'environment' for back
   const [showNextPhotoMessage, setShowNextPhotoMessage] = useState(false);
+  const [useMobileCamera, setUseMobileCamera] = useState(false); // Toggle for mobile camera mode
   const [settings, setSettings] = useState({
     eventName: '',
     template: null // Template image instead of background color
@@ -699,6 +700,195 @@ export default function CapturePage() {
     return isReady;
   }, []);
 
+  // Mobile camera capture function
+  const handleMobileCameraCapture = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (steps >= 3 || isProcessing) return;
+
+    setIsProcessing(true);
+    console.log('📱 Mobile camera capture started...');
+
+    try {
+      // Create image from file
+      const imageURL = URL.createObjectURL(file);
+      const img = new Image();
+
+      img.onload = async () => {
+        try {
+          // Process the captured image similar to takePhoto function
+          await processMobileCapturedImage(img);
+
+          // Clean up object URL
+          URL.revokeObjectURL(imageURL);
+
+          // Move to next step
+          setSteps(prev => prev + 1);
+
+          console.log(`✅ Mobile photo ${steps + 1} captured successfully`);
+
+          // Show "Next Photo" message after capture (except for the last photo)
+          if (steps < 2) {
+            setShowNextPhotoMessage(true);
+            setTimeout(() => {
+              setShowNextPhotoMessage(false);
+            }, 1500);
+          }
+
+        } catch (error) {
+          console.error('❌ Error processing mobile captured image:', error);
+          setNotification({
+            type: "error",
+            message: "Failed to process photo. Please try again."
+          });
+        } finally {
+          setIsProcessing(false);
+        }
+      };
+
+      img.onerror = () => {
+        console.error('❌ Failed to load mobile captured image');
+        setNotification({
+          type: "error",
+          message: "Failed to load photo. Please try again."
+        });
+        setIsProcessing(false);
+        URL.revokeObjectURL(imageURL);
+      };
+
+      img.src = imageURL;
+
+    } catch (error) {
+      console.error('❌ Mobile camera capture error:', error);
+      setNotification({
+        type: "error",
+        message: "Failed to capture photo. Please try again."
+      });
+      setIsProcessing(false);
+    }
+  };
+
+  // Process mobile captured image to fit photo box
+  const processMobileCapturedImage = async (img) => {
+    if (!canvasRef.current) {
+      throw new Error('Canvas not ready');
+    }
+
+    const photoWidth = 520;    // Match white box width exactly
+    const photoHeight = 385;   // Match white box height exactly
+    const photoX = (660 - photoWidth) / 2; // Center the photo boxes
+
+    // Y positions - increased gaps further, equal spacing maintained
+    const photoPositions = [
+      90,   // First photo box Y position (unchanged)
+      515,  // Second photo box Y position (increased gap further)
+      940   // Third photo box Y position (increased gap further)
+    ];
+
+    const photoY = photoPositions[steps] || photoPositions[0];
+
+    // Create temporary canvas for processing the mobile image
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = photoWidth;
+    tempCanvas.height = photoHeight;
+    const tempCtx = tempCanvas.getContext('2d');
+
+    // Calculate scaling to fit image in photo box while maintaining aspect ratio
+    const imgAspect = img.width / img.height;
+    const boxAspect = photoWidth / photoHeight;
+
+    let sourceX = 0, sourceY = 0, sourceWidth = img.width, sourceHeight = img.height;
+
+    if (imgAspect > boxAspect) {
+      // Image is wider - crop sides
+      sourceWidth = img.height * boxAspect;
+      sourceX = (img.width - sourceWidth) / 2;
+    } else {
+      // Image is taller - crop top/bottom
+      sourceHeight = img.width / boxAspect;
+      sourceY = (img.height - sourceHeight) / 2;
+    }
+
+    // Draw cropped and scaled image to temp canvas
+    tempCtx.drawImage(
+      img,
+      sourceX, sourceY, sourceWidth, sourceHeight,
+      0, 0, photoWidth, photoHeight
+    );
+
+    // Store the captured photo data
+    const capturedPhotoData = tempCanvas.toDataURL('image/jpeg', 0.9);
+    if (!capturedPhotoData || capturedPhotoData.length < 1000) {
+      throw new Error('Photo data too small or empty');
+    }
+
+    // Update captured photos array
+    const newCapturedPhotos = [...capturedPhotos, {
+      step: steps,
+      data: capturedPhotoData
+    }];
+    setCapturedPhotos(newCapturedPhotos);
+
+    // Redraw canvas with template and all photos
+    const ctx = canvasRef.current.getContext('2d');
+
+    if (settings.template) {
+      const templateImg = new Image();
+      templateImg.onload = () => {
+        // Clear and draw template
+        ctx.clearRect(0, 0, 660, 1800);
+        ctx.drawImage(templateImg, 0, 0, 660, 1800);
+
+        // Draw all captured photos
+        let photosLoaded = 0;
+        let photosErrored = 0;
+
+        newCapturedPhotos.forEach((photo, index) => {
+          const photoImg = new Image();
+          photoImg.onload = () => {
+            const photoPosition = photoPositions[photo.step] || photoPositions[0];
+            ctx.drawImage(photoImg, 0, 0, photoWidth, photoHeight, photoX, photoPosition, photoWidth, photoHeight);
+            photosLoaded++;
+
+            if (photosLoaded + photosErrored === newCapturedPhotos.length) {
+              addBeautifulText(ctx);
+              setIsCanvasReady(true);
+              console.log('✅ All mobile photos processed, text added, canvas ready');
+            }
+          };
+
+          photoImg.onerror = () => {
+            console.error(`❌ Failed to load mobile photo ${index + 1} for canvas`);
+            photosErrored++;
+
+            if (photosLoaded + photosErrored === newCapturedPhotos.length) {
+              addBeautifulText(ctx);
+              setIsCanvasReady(true);
+              console.log('✅ All mobile photos processed (some failed), text added, canvas ready');
+            }
+          };
+
+          photoImg.src = photo.data;
+        });
+
+        if (newCapturedPhotos.length === 0) {
+          addBeautifulText(ctx);
+        }
+      };
+
+      templateImg.src = settings.template;
+    } else {
+      // No template - use default background
+      console.log('📱 No template available, using default background for mobile photo');
+      createDefaultBackground(ctx, 660, 1800);
+      ctx.drawImage(tempCanvas, 0, 0, photoWidth, photoHeight, photoX, photoY, photoWidth, photoHeight);
+      addBeautifulText(ctx);
+    }
+
+    console.log(`📱 Mobile photo processed and placed in box ${steps + 1}`);
+  };
+
   const startCapture = () => {
     if (steps >= 3 || isProcessing) return;
 
@@ -1187,21 +1377,45 @@ export default function CapturePage() {
 
 
 
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              className="w-full rounded-lg shadow-2xl border-2 border-white/20 mobile-camera-video"
-              style={{
-                width: '100%',
-                height: '60vh', // Mobile: bigger height for multiple people
-                minHeight: '400px', // Mobile: larger minimum height
-                maxHeight: '60vh', // Mobile: larger maximum height
-                objectFit: 'contain',
-                transform: 'scale(1.1)',
-                transformOrigin: 'top center'
-              }}
-            />
+            {!useMobileCamera && (
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                className="w-full rounded-lg shadow-2xl border-2 border-white/20 mobile-camera-video"
+                style={{
+                  width: '100%',
+                  height: '60vh', // Mobile: bigger height for multiple people
+                  minHeight: '400px', // Mobile: larger minimum height
+                  maxHeight: '60vh', // Mobile: larger maximum height
+                  objectFit: 'contain',
+                  transform: 'scale(1.1)',
+                  transformOrigin: 'top center'
+                }}
+              />
+            )}
+
+            {/* Mobile Camera Mode Placeholder */}
+            {useMobileCamera && (
+              <div className="w-full rounded-lg shadow-2xl border-2 border-white/20 bg-gradient-to-br from-purple-900/50 to-pink-900/50 backdrop-blur-lg flex items-center justify-center"
+                style={{
+                  height: '60vh',
+                  minHeight: '400px',
+                  maxHeight: '60vh'
+                }}
+              >
+                <div className="text-center text-white p-8">
+                  <div className="text-6xl mb-4">📱</div>
+                  <h3 className="text-2xl font-bold mb-2">Mobile Camera Mode</h3>
+                  <p className="text-lg opacity-90 mb-4">Tap "Open Mobile Camera" to capture photos directly</p>
+                  <div className="text-sm opacity-75">
+                    <p>✅ Works on Android & iPhone</p>
+                    <p>✅ Direct camera access</p>
+                    <p>✅ High quality photos</p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Frame overlay to help users stay in frame */}
             <div className="absolute inset-2 border-2 border-white/30 rounded-lg pointer-events-none"></div>
@@ -1259,31 +1473,83 @@ export default function CapturePage() {
             </div>
 
             {/* Enhanced Capture Button - Mobile Optimized */}
-            <div className="mt-2 sm:mt-3 mobile-controls desktop-capture-spacing">
+            {!useMobileCamera && (
+              <div className="mt-2 sm:mt-3 mobile-controls desktop-capture-spacing">
+                <button
+                  onClick={startCapture}
+                  disabled={steps >= 3 || isProcessing}
+                  className={`w-full py-3 sm:py-3 md:py-3 px-4 rounded-xl sm:rounded-2xl font-bold text-lg sm:text-base md:text-lg transition-all duration-300 transform relative overflow-hidden mobile-button ${
+                    steps >= 3 || isProcessing
+                      ? 'bg-gradient-to-r from-gray-500 to-gray-600 cursor-not-allowed text-gray-200'
+                      : 'bg-gradient-to-r from-green-500 via-blue-500 to-purple-500 hover:from-green-600 hover:via-blue-600 hover:to-purple-600 text-white shadow-2xl hover:shadow-blue-500/25 hover:scale-105 active:scale-95 border border-white/30'
+                  }`}
+                >
+                  <div className="relative z-10 flex items-center justify-center space-x-3">
+                    {isProcessing ? (
+                      <>
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+                        <span className="text-lg sm:text-base md:text-lg">Processing...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-2xl sm:text-2xl">{steps >= 3 ? '✅' : '📸'}</span>
+                        <span className="text-lg sm:text-base md:text-lg">{steps >= 3 ? 'All Photos Captured!' : 'Capture Photo'}</span>
+                      </>
+                    )}
+                  </div>
+                </button>
+              </div>
+            )}
+
+            {/* Mobile Camera Toggle */}
+            <div className="mt-4 sm:mt-6 flex justify-center">
               <button
-                onClick={startCapture}
-                disabled={steps >= 3 || isProcessing}
-                className={`w-full py-3 sm:py-3 md:py-3 px-4 rounded-xl sm:rounded-2xl font-bold text-lg sm:text-base md:text-lg transition-all duration-300 transform relative overflow-hidden mobile-button ${
-                  steps >= 3 || isProcessing
-                    ? 'bg-gradient-to-r from-gray-500 to-gray-600 cursor-not-allowed text-gray-200'
-                    : 'bg-gradient-to-r from-green-500 via-blue-500 to-purple-500 hover:from-green-600 hover:via-blue-600 hover:to-purple-600 text-white shadow-2xl hover:shadow-blue-500/25 hover:scale-105 active:scale-95 border border-white/30'
-                }`}
+                onClick={() => setUseMobileCamera(!useMobileCamera)}
+                className="px-4 py-2 bg-white/10 hover:bg-white/20 backdrop-blur-lg rounded-xl text-white transition-all duration-300 transform hover:scale-105 active:scale-95 border border-white/20 hover:border-white/30 text-sm font-medium"
               >
-                <div className="relative z-10 flex items-center justify-center space-x-3">
-                  {isProcessing ? (
-                    <>
-                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
-                      <span className="text-lg sm:text-base md:text-lg">Processing...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="text-2xl sm:text-2xl">{steps >= 3 ? '✅' : '📸'}</span>
-                      <span className="text-lg sm:text-base md:text-lg">{steps >= 3 ? 'All Photos Captured!' : 'Capture Photo'}</span>
-                    </>
-                  )}
-                </div>
+                {useMobileCamera ? '📹 Use Live Camera' : '📱 Use Mobile Camera'}
               </button>
             </div>
+
+            {/* Mobile Camera Input */}
+            {useMobileCamera && (
+              <div className="mt-4 sm:mt-6 mobile-controls">
+                <label htmlFor="mobileCameraInput" className="block">
+                  <button
+                    disabled={steps >= 3 || isProcessing}
+                    className={`w-full py-3 sm:py-3 md:py-3 px-4 rounded-xl sm:rounded-2xl font-bold text-lg sm:text-base md:text-lg transition-all duration-300 transform relative overflow-hidden mobile-button ${
+                      steps >= 3 || isProcessing
+                        ? 'bg-gradient-to-r from-gray-500 to-gray-600 cursor-not-allowed text-gray-200'
+                        : 'bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 hover:from-orange-600 hover:via-red-600 hover:to-pink-600 text-white shadow-2xl hover:shadow-red-500/25 hover:scale-105 active:scale-95 border border-white/30'
+                    }`}
+                  >
+                    <div className="relative z-10 flex items-center justify-center space-x-3">
+                      {isProcessing ? (
+                        <>
+                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+                          <span className="text-lg sm:text-base md:text-lg">Processing...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-2xl sm:text-2xl">{steps >= 3 ? '✅' : '📱'}</span>
+                          <span className="text-lg sm:text-base md:text-lg">{steps >= 3 ? 'All Photos Captured!' : 'Open Mobile Camera'}</span>
+                        </>
+                      )}
+                    </div>
+                  </button>
+                </label>
+
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  id="mobileCameraInput"
+                  onChange={handleMobileCameraCapture}
+                  disabled={steps >= 3 || isProcessing}
+                  style={{ display: "none" }}
+                />
+              </div>
+            )}
 
             {/* Submit Strip Button */}
             <div className="mt-6 sm:mt-8 mobile-controls desktop-submit-spacing">
@@ -1313,16 +1579,17 @@ export default function CapturePage() {
             </div>
 
             {/* Camera Switch Button - Mobile Optimized */}
-            <div className="mt-4 sm:mt-5 mobile-controls desktop-switch-spacing">
-              <button
-                onClick={switchCamera}
-                disabled={isProcessing || isSwitchingCamera}
-                className={`w-full py-4 sm:py-3 px-4 backdrop-blur-lg rounded-xl text-white font-medium transition-all duration-300 transform border mobile-camera-switch ${
-                  isProcessing || isSwitchingCamera
-                    ? 'bg-gray-500/20 cursor-not-allowed border-gray-500/30'
-                    : 'bg-white/10 hover:bg-white/20 hover:scale-105 active:scale-95 border-white/20 hover:border-white/30'
-                }`}
-              >
+            {!useMobileCamera && (
+              <div className="mt-4 sm:mt-5 mobile-controls desktop-switch-spacing">
+                <button
+                  onClick={switchCamera}
+                  disabled={isProcessing || isSwitchingCamera}
+                  className={`w-full py-4 sm:py-3 px-4 backdrop-blur-lg rounded-xl text-white font-medium transition-all duration-300 transform border mobile-camera-switch ${
+                    isProcessing || isSwitchingCamera
+                      ? 'bg-gray-500/20 cursor-not-allowed border-gray-500/30'
+                      : 'bg-white/10 hover:bg-white/20 hover:scale-105 active:scale-95 border-white/20 hover:border-white/30'
+                  }`}
+                >
                 <div className="flex items-center justify-center space-x-2 sm:space-x-3">
                   {isSwitchingCamera ? (
                     <>
@@ -1340,7 +1607,8 @@ export default function CapturePage() {
                   )}
                 </div>
               </button>
-            </div>
+              </div>
+            )}
 
 
           </div>
