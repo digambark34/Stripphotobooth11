@@ -265,11 +265,11 @@ export default function CapturePage() {
   const addBeautifulText = (ctx) => {
     const canvasWidth = 660;   // Actual canvas width
     const photoWidth = 520;    // Custom width for photo boxes
-    const photoHeight = 350;   // Custom height for photo boxes
+    const photoHeight = 358;   // Custom height for photo boxes (increased by 8px)
     const photoX = (canvasWidth - photoWidth) / 2; // Center the photo boxes
 
-    // Photo frame positions - adjusted slightly down
-    const photoPositions = [60, 520, 980]; // Moved down slightly for better positioning
+    // Photo frame positions - adjusted for better spacing
+    const photoPositions = [60, 460, 860]; // Reduced gap between boxes
 
     // Add simple white borders around photo frames to match your image
     photoPositions.forEach((photoY) => {
@@ -776,14 +776,14 @@ export default function CapturePage() {
 
     // Photo frames - MUST match addBeautifulText dimensions exactly
     const photoWidth = 520;    // Match white box width exactly
-    const photoHeight = 350;   // Match white box height exactly
+    const photoHeight = 358;   // Match white box height exactly (increased by 8px)
     const photoX = (660 - photoWidth) / 2; // Center the photo boxes
 
-    // Y positions - adjusted slightly down for better positioning
+    // Y positions - adjusted for better spacing
     const photoPositions = [
-      60,   // First photo box Y position (moved down slightly)
-      520,  // Second photo box Y position (moved down slightly)
-      980   // Third photo box Y position (moved down slightly)
+      60,   // First photo box Y position (unchanged)
+      460,  // Second photo box Y position (reduced gap)
+      860   // Third photo box Y position (reduced gap)
     ];
 
     const photoY = photoPositions[steps] || photoPositions[0];
