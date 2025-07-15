@@ -265,7 +265,7 @@ export default function CapturePage() {
   const addBeautifulText = (ctx) => {
     const canvasWidth = 660;   // Actual canvas width
     const photoWidth = 520;    // Custom width for photo boxes
-    const photoHeight = 370;   // Custom height for photo boxes
+    const photoHeight = 350;   // Custom height for photo boxes
     const photoX = (canvasWidth - photoWidth) / 2; // Center the photo boxes
 
     // Photo frame positions - first box moved up, better gaps between boxes
@@ -776,7 +776,7 @@ export default function CapturePage() {
 
     // Photo frames - MUST match addBeautifulText dimensions exactly
     const photoWidth = 520;    // Match white box width exactly
-    const photoHeight = 370;   // Match white box height exactly
+    const photoHeight = 350;   // Match white box height exactly
     const photoX = (660 - photoWidth) / 2; // Center the photo boxes
 
     // Y positions - first box moved up, better gaps between boxes
