@@ -702,10 +702,19 @@ export default function CapturePage() {
 
   // Mobile camera capture function
   const handleMobileCameraCapture = async (e) => {
+    console.log('📱 Mobile camera capture triggered', e);
     const file = e.target.files[0];
-    if (!file) return;
+    console.log('📱 Selected file:', file);
 
-    if (steps >= 3 || isProcessing) return;
+    if (!file) {
+      console.log('❌ No file selected');
+      return;
+    }
+
+    if (steps >= 3 || isProcessing) {
+      console.log('❌ Cannot capture - steps:', steps, 'isProcessing:', isProcessing);
+      return;
+    }
 
     setIsProcessing(true);
     console.log('📱 Mobile camera capture started...');
@@ -1514,30 +1523,39 @@ export default function CapturePage() {
             {/* Mobile Camera Input */}
             {useMobileCamera && (
               <div className="mt-4 sm:mt-6 mobile-controls">
-                <label htmlFor="mobileCameraInput" className="block">
-                  <button
-                    disabled={steps >= 3 || isProcessing}
-                    className={`w-full py-3 sm:py-3 md:py-3 px-4 rounded-xl sm:rounded-2xl font-bold text-lg sm:text-base md:text-lg transition-all duration-300 transform relative overflow-hidden mobile-button ${
-                      steps >= 3 || isProcessing
-                        ? 'bg-gradient-to-r from-gray-500 to-gray-600 cursor-not-allowed text-gray-200'
-                        : 'bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 hover:from-orange-600 hover:via-red-600 hover:to-pink-600 text-white shadow-2xl hover:shadow-red-500/25 hover:scale-105 active:scale-95 border border-white/30'
-                    }`}
-                  >
-                    <div className="relative z-10 flex items-center justify-center space-x-3">
-                      {isProcessing ? (
-                        <>
-                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
-                          <span className="text-lg sm:text-base md:text-lg">Processing...</span>
-                        </>
-                      ) : (
-                        <>
-                          <span className="text-2xl sm:text-2xl">{steps >= 3 ? '✅' : '📱'}</span>
-                          <span className="text-lg sm:text-base md:text-lg">{steps >= 3 ? 'All Photos Captured!' : 'Open Mobile Camera'}</span>
-                        </>
-                      )}
-                    </div>
-                  </button>
-                </label>
+                <button
+                  onClick={() => {
+                    console.log('📱 Mobile camera button clicked');
+                    const input = document.getElementById('mobileCameraInput');
+                    console.log('📱 Input element found:', input);
+                    if (input) {
+                      input.click();
+                      console.log('📱 Input clicked');
+                    } else {
+                      console.error('❌ Mobile camera input not found');
+                    }
+                  }}
+                  disabled={steps >= 3 || isProcessing}
+                  className={`w-full py-3 sm:py-3 md:py-3 px-4 rounded-xl sm:rounded-2xl font-bold text-lg sm:text-base md:text-lg transition-all duration-300 transform relative overflow-hidden mobile-button ${
+                    steps >= 3 || isProcessing
+                      ? 'bg-gradient-to-r from-gray-500 to-gray-600 cursor-not-allowed text-gray-200'
+                      : 'bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 hover:from-orange-600 hover:via-red-600 hover:to-pink-600 text-white shadow-2xl hover:shadow-red-500/25 hover:scale-105 active:scale-95 border border-white/30'
+                  }`}
+                >
+                  <div className="relative z-10 flex items-center justify-center space-x-3">
+                    {isProcessing ? (
+                      <>
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+                        <span className="text-lg sm:text-base md:text-lg">Processing...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-2xl sm:text-2xl">{steps >= 3 ? '✅' : '📱'}</span>
+                        <span className="text-lg sm:text-base md:text-lg">{steps >= 3 ? 'All Photos Captured!' : 'Open Mobile Camera'}</span>
+                      </>
+                    )}
+                  </div>
+                </button>
 
                 <input
                   type="file"
