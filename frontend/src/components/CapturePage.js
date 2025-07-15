@@ -19,8 +19,8 @@ axiosRetry(axios, {
   }
 });
 
-// Global timeout configuration for all requests
-axios.defaults.timeout = 30000; // 30 seconds - optimal balance of reliability and speed
+// Add timeout protection
+axios.defaults.timeout = 10000; // 10 second timeout per request
 
 export default function CapturePage() {
   const videoRef = useRef(null);
@@ -40,11 +40,31 @@ export default function CapturePage() {
   const [isProcessing, setIsProcessing] = useState(false); // Processing delay between captures
   const [cachedTemplate, setCachedTemplate] = useState(null); // Cache template for offline use
   const [isSwitchingCamera, setIsSwitchingCamera] = useState(false); // Track camera switching
+  const [isCanvasReady, setIsCanvasReady] = useState(false); // Track canvas rendering state
 
   // Fallback API URL if environment variable is not set
   const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
+  // Monitor network status for offline handling
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOffline(false);
+      console.log('🌐 Network connection restored');
+    };
 
+    const handleOffline = () => {
+      setIsOffline(true);
+      console.warn('📵 Network connection lost - using cached data');
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
 
 
@@ -244,8 +264,8 @@ export default function CapturePage() {
   // Photo boxes layout with optimized dimensions
   const addBeautifulText = (ctx) => {
     const canvasWidth = 660;   // Actual canvas width
-    const photoWidth = 540;    // Slightly decreased width for better proportions
-    const photoHeight = 390;   // Slightly decreased height for better proportions
+    const photoWidth = 520;    // Custom width for photo boxes
+    const photoHeight = 370;   // Custom height for photo boxes
     const photoX = (canvasWidth - photoWidth) / 2; // Center the photo boxes
 
     // Photo frame positions - first box moved up, better gaps between boxes
@@ -755,8 +775,8 @@ export default function CapturePage() {
     }
 
     // Photo frames - MUST match addBeautifulText dimensions exactly
-    const photoWidth = 540;    // Match white box width exactly
-    const photoHeight = 390;   // Match white box height exactly
+    const photoWidth = 520;    // Match white box width exactly
+    const photoHeight = 370;   // Match white box height exactly
     const photoX = (660 - photoWidth) / 2; // Center the photo boxes
 
     // Y positions - first box moved up, better gaps between boxes
@@ -883,22 +903,49 @@ export default function CapturePage() {
 
         // Then: Draw all captured photos on top (preserves template in gaps)
         let photosLoaded = 0;
-        newCapturedPhotos.forEach(photo => {
+        let photosErrored = 0;
+
+        if (newCapturedPhotos.length === 0) {
+          console.warn('⚠️ No photos to draw on canvas');
+          addBeautifulText(ctx);
+          return;
+        }
+
+        newCapturedPhotos.forEach((photo, index) => {
           const photoImg = new Image();
           photoImg.crossOrigin = 'anonymous'; // Enable CORS for photo data URLs
           photoImg.onload = () => {
             // Ensure canvas is still ready before drawing
-            if (!canvasRef.current) return;
+            if (!canvasRef.current) {
+              console.error('❌ Canvas lost during photo loading');
+              return;
+            }
 
             // Draw photo exactly within box boundaries
             ctx.drawImage(photoImg, 0, 0, photoWidth, photoHeight, photo.x, photo.y, photoWidth, photoHeight);
             photosLoaded++;
+            console.log(`✅ Photo ${index + 1}/${newCapturedPhotos.length} drawn to canvas`);
 
             // After all photos are loaded, add beautiful text
-            if (photosLoaded === newCapturedPhotos.length) {
+            if (photosLoaded + photosErrored === newCapturedPhotos.length) {
               addBeautifulText(ctx);
+              setIsCanvasReady(true); // Mark canvas as ready
+              console.log('✅ All photos processed, text added, canvas ready');
             }
           };
+
+          photoImg.onerror = () => {
+            console.error(`❌ Failed to load photo ${index + 1} for canvas`);
+            photosErrored++;
+
+            // Continue even if some photos fail
+            if (photosLoaded + photosErrored === newCapturedPhotos.length) {
+              addBeautifulText(ctx);
+              setIsCanvasReady(true); // Mark canvas as ready
+              console.log('✅ All photos processed (some failed), text added, canvas ready');
+            }
+          };
+
           photoImg.src = photo.data;
         });
 
@@ -966,72 +1013,54 @@ export default function CapturePage() {
         throw new Error('Canvas not available');
       }
 
-      // Wait a moment to ensure canvas is fully ready
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Wait for canvas to be fully rendered (optimized timing)
+      console.log('⏳ Waiting for canvas to be fully rendered...');
+      await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second - balanced speed and reliability
 
       // Double-check canvas is still ready
       if (!canvasRef.current) {
         throw new Error('Canvas not ready after delay');
       }
 
-      // Mobile-optimized image generation using toBlob (more stable than toDataURL)
-      const generateImageData = () => new Promise((resolve, reject) => {
-        try {
-          // Try WebP format first (better compression, quality)
-          canvasRef.current.toBlob((blob) => {
-            if (!blob || blob.size < 1000) {
-              reject(new Error('Generated image appears to be blank or too small'));
-              return;
-            }
+      // Validate canvas has actual content (not just blank)
+      const ctx = canvasRef.current.getContext('2d');
+      const imageData = ctx.getImageData(0, 0, canvasRef.current.width, canvasRef.current.height);
+      const pixels = imageData.data;
 
-            // Convert blob to base64 for upload
-            const reader = new FileReader();
-            reader.onload = () => {
-              console.log(`📦 WebP image generated: ${(blob.size / 1024).toFixed(1)}KB`);
-              resolve(reader.result);
-            };
-            reader.onerror = () => reject(new Error('Failed to convert image to base64'));
-            reader.readAsDataURL(blob);
-          }, 'image/webp', 0.9);
-        } catch (error) {
-          // Fallback to JPEG if WebP fails
-          console.log('📦 WebP failed, using JPEG fallback');
-          canvasRef.current.toBlob((blob) => {
-            if (!blob || blob.size < 1000) {
-              reject(new Error('Generated image appears to be blank or too small'));
-              return;
-            }
-
-            const reader = new FileReader();
-            reader.onload = () => {
-              console.log(`📦 JPEG image generated: ${(blob.size / 1024).toFixed(1)}KB`);
-              resolve(reader.result);
-            };
-            reader.onerror = () => reject(new Error('Failed to convert image to base64'));
-            reader.readAsDataURL(blob);
-          }, 'image/jpeg', 0.8);
+      // Check if canvas has non-transparent pixels
+      let hasContent = false;
+      for (let i = 3; i < pixels.length; i += 4) { // Check alpha channel every 4th byte
+        if (pixels[i] > 0) { // If alpha > 0, there's content
+          hasContent = true;
+          break;
         }
-      });
+      }
 
-      const dataUrl = await generateImageData();
+      if (!hasContent) {
+        throw new Error('Canvas appears to be blank - no photos detected');
+      }
+
+      console.log('✅ Canvas validation passed - content detected');
+
+      const dataUrl = canvasRef.current.toDataURL("image/jpeg", 0.8);
+
+      // Validate the generated image data
+      if (!dataUrl || dataUrl.length < 10000) {
+        throw new Error('Generated image appears to be blank or too small');
+      }
 
       console.log(`📤 Submitting photo strip, data size: ${(dataUrl.length / 1024).toFixed(1)}KB`);
 
-      // Create optimized axios instance for uploads
-      const uploadAxios = axios.create({
-        timeout: 60000, // 60 seconds - balanced timeout for uploads
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
+      // Create a custom axios instance for this upload with retry status updates
+      const uploadAxios = axios.create();
 
-      // Enhanced retry configuration with user feedback
+      // Configure retry with status updates for this specific request
       axiosRetry(uploadAxios, {
-        retries: 2, // Reduced to 2 retries for faster failure detection
+        retries: 3,
         retryDelay: (retryCount, error) => {
-          console.warn(`🔄 Upload retry ${retryCount}/2 due to:`, error.message);
-          setRetryStatus(`Upload failed. Retrying... (${retryCount}/2)`);
-          return Math.min(1000 * Math.pow(2, retryCount), 5000); // Max 5 second delay
+          console.warn(`🔄 Upload retry ${retryCount}/3 due to:`, error.message);
+          setRetryStatus(`Retrying upload (${retryCount}/3)...`);
+          return axiosRetry.exponentialDelay(retryCount);
         },
         retryCondition: (error) => {
           // Smart retry: Only retry on network errors and 5xx server errors
@@ -1054,6 +1083,7 @@ export default function CapturePage() {
 
       setSteps(0);
       setCapturedPhotos([]); // Clear captured photos
+      setIsCanvasReady(false); // Reset canvas ready state
       initializeCanvas(); // Clear and reinitialize with background
     } catch (error) {
       console.error("❌ Upload failed after retries:", {

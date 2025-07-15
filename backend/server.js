@@ -2,9 +2,6 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
-
-// ✅ Disable mongoose buffering for production (separate from connection options)
-mongoose.set('bufferCommands', false);
 const stripRoutes = require("./routes/stripRoutes");
 const settingsRoutes = require("./routes/settingsRoutes");
 const healthRoutes = require("./routes/healthRoutes");
@@ -26,27 +23,15 @@ console.log("🔗 Connection string:", mongoUri.replace(/\/\/.*@/, '//***:***@')
 mongoose.connect(mongoUri, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
-  maxPoolSize: 100,                     // Increased for 1000+ users
-  minPoolSize: 10,                      // Maintain minimum connections
+  maxPoolSize: 50,                      // Allow more concurrent users
   serverSelectionTimeoutMS: 5000,       // Retry for 5 seconds if DB not available
-  socketTimeoutMS: 45000,               // Timeout per operation
-  connectTimeoutMS: 10000,              // Connection timeout if Mongo is down
-  maxIdleTimeMS: 30000                  // Close connections after 30s idle
+  socketTimeoutMS: 45000,               // Timeout per operation (default is 30s)
+  connectTimeoutMS: 10000               // Connection timeout if Mongo is down
 })
-.then(() => {
-  console.log("✅ MongoDB connected successfully");
-  console.log(`✅ Database: ${mongoose.connection.name}`);
-})
+.then(() => console.log("✅ MongoDB connected successfully"))
 .catch((err) => {
-  console.error("❌ MongoDB connection error:", err.message);
-
-  // Don't exit in development, but log the issue
-  if (process.env.NODE_ENV === 'production') {
-    console.error("❌ Exiting in production mode");
-    process.exit(1);
-  } else {
-    console.log("⚠️ Continuing in development mode...");
-  }
+  console.error("❌ MongoDB connection error:", err);
+  process.exit(1);
 });
 
 // ✅ Initialize Express App
@@ -84,11 +69,10 @@ app.use(cors({
   optionsSuccessStatus: 200 // For legacy browser support
 }));
 
-// Optimized payload limits for photo strip uploads
-app.use(express.json({ limit: '20mb' }));
-app.use(express.urlencoded({ extended: true, limit: '20mb' }));
+app.use(express.json({ limit: '25mb' }));
+app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 
-// ✅ Simple Request logging
+// ✅ Request logging
 app.use((req, _res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
   next();
@@ -121,9 +105,6 @@ const server = app.listen(PORT, () => {
   console.log(`✅ Backend running on port ${PORT}`);
   console.log(`✅ Environment: ${process.env.NODE_ENV || 'development'}`);
 });
-
-// ✅ Set server timeout for large uploads
-server.timeout = 60000; // 60 seconds timeout
 
 // ✅ Graceful Shutdown
 const gracefulShutdown = (signal) => {
