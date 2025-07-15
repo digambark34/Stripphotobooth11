@@ -264,6 +264,7 @@ export default function CapturePage() {
 
   // Photo boxes layout with optimized dimensions
   const addBeautifulText = (ctx) => {
+    console.log('🎨 Adding beautiful text and BLACK BORDERS to canvas');
     const canvasWidth = 660;   // Actual canvas width
     const photoWidth = 520;    // Custom width for photo boxes
     const photoHeight = 385;   // Custom height for photo boxes (increased even more)
@@ -272,14 +273,20 @@ export default function CapturePage() {
     // Photo frame positions - increased gaps further
     const photoPositions = [90, 515, 940]; // Increased gaps further between all boxes
 
-    // Add simple white borders around photo frames to match your image
-    photoPositions.forEach((photoY) => {
+    // Add prominent black borders around photo frames
+    photoPositions.forEach((photoY, index) => {
       ctx.save();
 
-      // Simple white border like in your image
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
-      ctx.lineWidth = 3;
-      ctx.strokeRect(photoX - 2, photoY - 2, photoWidth + 4, photoHeight + 4);
+      // Prominent black border for better contrast and visibility
+      ctx.strokeStyle = 'rgba(0, 0, 0, 1.0)'; // Full opacity black
+      ctx.lineWidth = 4; // Thicker border for better visibility
+      ctx.strokeRect(photoX - 3, photoY - 3, photoWidth + 6, photoHeight + 6);
+      console.log(`🖤 Drew BLACK BORDER for photo box ${index + 1} at position y:${photoY}`);
+
+      // Add inner shadow effect for more definition
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(photoX - 1, photoY - 1, photoWidth + 2, photoHeight + 2);
 
       ctx.restore();
     });
@@ -883,7 +890,7 @@ export default function CapturePage() {
     if (settings.template) {
       const templateImg = new Image();
       templateImg.crossOrigin = 'anonymous'; // Enable CORS for Cloudinary images
-      templateImg.onload = () => {
+      templateImg.onload = async () => {
         // Ensure canvas is still ready before drawing
         if (!canvasRef.current) return;
 
@@ -891,49 +898,56 @@ export default function CapturePage() {
         ctx.drawImage(templateImg, 0, 0, 660, 1800);
 
         // Then: Draw all captured photos on top (preserves template in gaps)
-        let photosLoaded = 0;
-        let photosErrored = 0;
-
         if (newCapturedPhotos.length === 0) {
           console.warn('⚠️ No mobile photos to draw on canvas');
           addBeautifulText(ctx);
           return;
         }
 
-        newCapturedPhotos.forEach((photo, index) => {
-          const photoImg = new Image();
-          photoImg.crossOrigin = 'anonymous'; // Enable CORS for mobile photos
-          photoImg.onload = () => {
-            // Ensure canvas is still ready before drawing
-            if (!canvasRef.current) return;
+        // CRITICAL FIX: Use Promise.all to ensure ALL photos load before proceeding
+        const photoPromises = newCapturedPhotos.map((photo, index) => {
+          return new Promise((resolve, reject) => {
+            const photoImg = new Image();
+            photoImg.crossOrigin = 'anonymous'; // Enable CORS for mobile photos
 
-            // Draw photo exactly within box boundaries
-            ctx.drawImage(photoImg, 0, 0, photoWidth, photoHeight, photo.x, photo.y, photoWidth, photoHeight);
-            photosLoaded++;
-            console.log(`✅ Mobile photo ${index + 1}/${newCapturedPhotos.length} drawn to canvas`);
+            photoImg.onload = () => {
+              // Ensure canvas is still ready before drawing
+              if (!canvasRef.current) {
+                reject(new Error('Canvas not ready'));
+                return;
+              }
 
-            // After all photos are loaded, add beautiful text
-            if (photosLoaded + photosErrored === newCapturedPhotos.length) {
-              addBeautifulText(ctx);
-              setIsCanvasReady(true); // Mark canvas as ready
-              console.log('✅ All mobile photos processed, text added, canvas ready');
-            }
-          };
+              // Draw photo exactly within box boundaries
+              ctx.drawImage(photoImg, 0, 0, photoWidth, photoHeight, photo.x, photo.y, photoWidth, photoHeight);
+              console.log(`✅ Mobile photo ${index + 1}/${newCapturedPhotos.length} drawn to canvas`);
+              resolve();
+            };
 
-          photoImg.onerror = () => {
-            console.error(`❌ Failed to load mobile photo ${index + 1} for canvas`);
-            photosErrored++;
+            photoImg.onerror = () => {
+              console.error(`❌ Failed to load mobile photo ${index + 1} for canvas`);
+              reject(new Error(`Failed to load photo ${index + 1}`));
+            };
 
-            // Continue even if some photos fail
-            if (photosLoaded + photosErrored === newCapturedPhotos.length) {
-              addBeautifulText(ctx);
-              setIsCanvasReady(true); // Mark canvas as ready
-              console.log('✅ All mobile photos processed (some failed), text added, canvas ready');
-            }
-          };
-
-          photoImg.src = photo.data;
+            photoImg.src = photo.data;
+          });
         });
+
+        // Wait for ALL photos to load before adding text
+        try {
+          await Promise.all(photoPromises);
+          console.log('✅ ALL mobile photos loaded successfully');
+
+          // Add text only after all photos are confirmed loaded
+          addBeautifulText(ctx);
+          setIsCanvasReady(true);
+          console.log('✅ All mobile photos processed, text added, canvas ready');
+        } catch (error) {
+          console.error('❌ Some mobile photos failed to load:', error);
+          // Still add text even if some photos failed
+          addBeautifulText(ctx);
+          setIsCanvasReady(true);
+          console.log('✅ Mobile photos processed (some failed), text added, canvas ready');
+        }
 
         // If no photos yet, still add text
         if (newCapturedPhotos.length === 0) {
@@ -1174,7 +1188,7 @@ export default function CapturePage() {
     if (settings.template) {
       const templateImg = new Image();
       templateImg.crossOrigin = 'anonymous'; // Enable CORS for Cloudinary images
-      templateImg.onload = () => {
+      templateImg.onload = async () => {
         // Ensure canvas is still ready before drawing
         if (!canvasRef.current) return;
 
@@ -1182,52 +1196,56 @@ export default function CapturePage() {
         ctx.drawImage(templateImg, 0, 0, 660, 1800);
 
         // Then: Draw all captured photos on top (preserves template in gaps)
-        let photosLoaded = 0;
-        let photosErrored = 0;
-
         if (newCapturedPhotos.length === 0) {
           console.warn('⚠️ No photos to draw on canvas');
           addBeautifulText(ctx);
           return;
         }
 
-        newCapturedPhotos.forEach((photo, index) => {
-          const photoImg = new Image();
-          photoImg.crossOrigin = 'anonymous'; // Enable CORS for photo data URLs
-          photoImg.onload = () => {
-            // Ensure canvas is still ready before drawing
-            if (!canvasRef.current) {
-              console.error('❌ Canvas lost during photo loading');
-              return;
-            }
+        // CRITICAL FIX: Use Promise.all to ensure ALL photos load before proceeding
+        const photoPromises = newCapturedPhotos.map((photo, index) => {
+          return new Promise((resolve, reject) => {
+            const photoImg = new Image();
+            photoImg.crossOrigin = 'anonymous'; // Enable CORS for photo data URLs
 
-            // Draw photo exactly within box boundaries
-            ctx.drawImage(photoImg, 0, 0, photoWidth, photoHeight, photo.x, photo.y, photoWidth, photoHeight);
-            photosLoaded++;
-            console.log(`✅ Photo ${index + 1}/${newCapturedPhotos.length} drawn to canvas`);
+            photoImg.onload = () => {
+              // Ensure canvas is still ready before drawing
+              if (!canvasRef.current) {
+                reject(new Error('Canvas lost during photo loading'));
+                return;
+              }
 
-            // After all photos are loaded, add beautiful text
-            if (photosLoaded + photosErrored === newCapturedPhotos.length) {
-              addBeautifulText(ctx);
-              setIsCanvasReady(true); // Mark canvas as ready
-              console.log('✅ All photos processed, text added, canvas ready');
-            }
-          };
+              // Draw photo exactly within box boundaries
+              ctx.drawImage(photoImg, 0, 0, photoWidth, photoHeight, photo.x, photo.y, photoWidth, photoHeight);
+              console.log(`✅ Photo ${index + 1}/${newCapturedPhotos.length} drawn to canvas`);
+              resolve();
+            };
 
-          photoImg.onerror = () => {
-            console.error(`❌ Failed to load photo ${index + 1} for canvas`);
-            photosErrored++;
+            photoImg.onerror = () => {
+              console.error(`❌ Failed to load photo ${index + 1} for canvas`);
+              reject(new Error(`Failed to load photo ${index + 1}`));
+            };
 
-            // Continue even if some photos fail
-            if (photosLoaded + photosErrored === newCapturedPhotos.length) {
-              addBeautifulText(ctx);
-              setIsCanvasReady(true); // Mark canvas as ready
-              console.log('✅ All photos processed (some failed), text added, canvas ready');
-            }
-          };
-
-          photoImg.src = photo.data;
+            photoImg.src = photo.data;
+          });
         });
+
+        // Wait for ALL photos to load before adding text
+        try {
+          await Promise.all(photoPromises);
+          console.log('✅ ALL photos loaded successfully');
+
+          // Add text only after all photos are confirmed loaded
+          addBeautifulText(ctx);
+          setIsCanvasReady(true);
+          console.log('✅ All photos processed, text added, canvas ready');
+        } catch (error) {
+          console.error('❌ Some photos failed to load:', error);
+          // Still add text even if some photos failed
+          addBeautifulText(ctx);
+          setIsCanvasReady(true);
+          console.log('✅ Photos processed (some failed), text added, canvas ready');
+        }
 
         // If no photos yet, still add text
         if (newCapturedPhotos.length === 0) {
@@ -1298,9 +1316,24 @@ export default function CapturePage() {
         throw new Error('Canvas not available');
       }
 
-      // Wait for canvas to be fully rendered (optimized timing)
+      // Wait for canvas to be fully rendered (CRITICAL: Longer wait for photo loading)
       console.log('⏳ Waiting for canvas to be fully rendered...');
-      await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second - balanced speed and reliability
+      console.log('🔍 Canvas ready state:', isCanvasReady);
+      console.log('📊 Captured photos count:', capturedPhotos.length);
+
+      // CRITICAL FIX: Wait longer and check canvas ready state
+      let waitTime = 2000; // Start with 2 seconds
+      if (capturedPhotos.length > 0) {
+        waitTime = 3000; // 3 seconds if we have photos to ensure they're loaded
+      }
+
+      await new Promise(resolve => setTimeout(resolve, waitTime));
+
+      // Additional wait if canvas is not ready
+      if (!isCanvasReady && capturedPhotos.length > 0) {
+        console.log('⏳ Canvas not ready, waiting additional time...');
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Additional 2 seconds
+      }
 
       // Double-check canvas is still ready
       if (!canvasRef.current) {
@@ -1347,32 +1380,84 @@ export default function CapturePage() {
           hasTemplate: !!settings.template
         });
 
-        // Try to force redraw the canvas
-        console.log('🔄 Attempting to redraw canvas...');
+        // CRITICAL FIX: Force synchronous canvas redraw
+        console.log('🔄 Attempting to redraw canvas synchronously...');
         if (capturedPhotos.length > 0) {
-          // Force redraw with current photos
           const ctx = canvasRef.current.getContext('2d');
-          if (settings.template) {
-            const templateImg = new Image();
-            templateImg.crossOrigin = 'anonymous'; // Enable CORS for template
-            templateImg.onload = () => {
-              ctx.clearRect(0, 0, 660, 1800);
-              ctx.drawImage(templateImg, 0, 0, 660, 1800);
 
-              // Redraw all photos
-              capturedPhotos.forEach((photo, index) => {
-                const photoImg = new Image();
-                photoImg.crossOrigin = 'anonymous'; // Enable CORS for mobile photos
-                photoImg.onload = () => {
-                  ctx.drawImage(photoImg, 0, 0, 520, 385, photo.x, photo.y, 520, 385);
-                  console.log(`🔄 Redrawn photo ${index + 1} at x:${photo.x}, y:${photo.y}`);
+          try {
+            if (settings.template) {
+              // Force synchronous redraw with template
+              const templateImg = new Image();
+              templateImg.crossOrigin = 'anonymous';
+
+              // Use synchronous approach with Promise
+              await new Promise((resolve, reject) => {
+                templateImg.onload = async () => {
+                  try {
+                    ctx.clearRect(0, 0, 660, 1800);
+                    ctx.drawImage(templateImg, 0, 0, 660, 1800);
+
+                    // Synchronously load and draw all photos
+                    const photoPromises = capturedPhotos.map((photo, index) => {
+                      return new Promise((photoResolve) => {
+                        const photoImg = new Image();
+                        photoImg.crossOrigin = 'anonymous';
+                        photoImg.onload = () => {
+                          ctx.drawImage(photoImg, 0, 0, 520, 385, photo.x, photo.y, 520, 385);
+                          console.log(`🔄 Force redrawn photo ${index + 1} at x:${photo.x}, y:${photo.y}`);
+                          photoResolve();
+                        };
+                        photoImg.onerror = () => {
+                          console.error(`❌ Failed to force redraw photo ${index + 1}`);
+                          photoResolve();
+                        };
+                        photoImg.src = photo.data;
+                      });
+                    });
+
+                    await Promise.all(photoPromises);
+                    addBeautifulText(ctx);
+                    console.log('✅ Force redraw completed');
+                    resolve();
+                  } catch (error) {
+                    reject(error);
+                  }
                 };
-                photoImg.src = photo.data;
+                templateImg.onerror = () => reject(new Error('Template load failed'));
+                templateImg.src = settings.template;
+              });
+            } else {
+              // No template - use default background
+              createDefaultBackground(ctx, 660, 1800);
+
+              // Draw all photos synchronously
+              const photoPromises = capturedPhotos.map((photo, index) => {
+                return new Promise((photoResolve) => {
+                  const photoImg = new Image();
+                  photoImg.onload = () => {
+                    ctx.drawImage(photoImg, 0, 0, 520, 385, photo.x, photo.y, 520, 385);
+                    console.log(`🔄 Force redrawn photo ${index + 1} (no template)`);
+                    photoResolve();
+                  };
+                  photoImg.onerror = () => {
+                    console.error(`❌ Failed to force redraw photo ${index + 1}`);
+                    photoResolve();
+                  };
+                  photoImg.src = photo.data;
+                });
               });
 
+              await Promise.all(photoPromises);
               addBeautifulText(ctx);
-            };
-            templateImg.src = settings.template;
+              console.log('✅ Force redraw completed (no template)');
+            }
+
+            // Wait a bit more after forced redraw
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
+          } catch (error) {
+            console.error('❌ Force redraw failed:', error);
           }
         }
 
