@@ -268,8 +268,8 @@ export default function CapturePage() {
     const photoHeight = 350;   // Custom height for photo boxes
     const photoX = (canvasWidth - photoWidth) / 2; // Center the photo boxes
 
-    // Photo frame positions - first box moved up, better gaps between boxes
-    const photoPositions = [40, 500, 960]; // First box higher, more gap between boxes
+    // Photo frame positions - adjusted slightly down
+    const photoPositions = [60, 520, 980]; // Moved down slightly for better positioning
 
     // Add simple white borders around photo frames to match your image
     photoPositions.forEach((photoY) => {
@@ -779,11 +779,11 @@ export default function CapturePage() {
     const photoHeight = 350;   // Match white box height exactly
     const photoX = (660 - photoWidth) / 2; // Center the photo boxes
 
-    // Y positions - first box moved up, better gaps between boxes
+    // Y positions - adjusted slightly down for better positioning
     const photoPositions = [
-      40,   // First photo box Y position (moved higher)
-      500,  // Second photo box Y position (more gap from first)
-      960   // Third photo box Y position (more gap from second)
+      60,   // First photo box Y position (moved down slightly)
+      520,  // Second photo box Y position (moved down slightly)
+      980   // Third photo box Y position (moved down slightly)
     ];
 
     const photoY = photoPositions[steps] || photoPositions[0];
