@@ -19,8 +19,8 @@ axiosRetry(axios, {
   }
 });
 
-// Add timeout protection
-axios.defaults.timeout = 10000; // 10 second timeout per request
+// Remove global timeout - let requests take time they need
+// Only critical uploads will have specific timeouts
 
 export default function CapturePage() {
   const videoRef = useRef(null);
@@ -509,14 +509,9 @@ export default function CapturePage() {
         videoRef.current.srcObject = stream;
         console.log(`✅ Camera stream assigned to video element`);
 
-        // Enhanced video readiness validation
+        // Enhanced video readiness validation (no timeout - let camera take time it needs)
         await new Promise((resolve, reject) => {
-          const timeout = setTimeout(() => {
-            reject(new Error('Video loading timeout'));
-          }, 10000); // 10 second timeout
-
           const handleLoadedData = () => {
-            clearTimeout(timeout);
             videoRef.current.removeEventListener('loadeddata', handleLoadedData);
             videoRef.current.removeEventListener('error', handleError);
             console.log(`📹 Video data loaded for ${facingMode} camera`);
@@ -524,7 +519,6 @@ export default function CapturePage() {
           };
 
           const handleError = (error) => {
-            clearTimeout(timeout);
             videoRef.current.removeEventListener('loadeddata', handleLoadedData);
             videoRef.current.removeEventListener('error', handleError);
             reject(error);
@@ -1694,7 +1688,9 @@ export default function CapturePage() {
       console.log(`📤 Submitting photo strip, data size: ${(dataUrl.length / 1024).toFixed(1)}KB`);
 
       // Create a custom axios instance for this upload with retry status updates
-      const uploadAxios = axios.create();
+      const uploadAxios = axios.create({
+        timeout: 60000 // 60 second timeout only for photo uploads (large files)
+      });
 
       // Configure retry with status updates for this specific request
       axiosRetry(uploadAxios, {
