@@ -42,6 +42,7 @@ export default function CapturePage() {
   const [cachedTemplate, setCachedTemplate] = useState(null); // Cache template for offline use
   const [isSwitchingCamera, setIsSwitchingCamera] = useState(false); // Track camera switching
   const [isCanvasReady, setIsCanvasReady] = useState(false); // Track canvas rendering state
+  const [isCanvasProtected, setIsCanvasProtected] = useState(false); // Prevent canvas clearing during submission
 
   // Fallback API URL if environment variable is not set
   const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
@@ -71,6 +72,12 @@ export default function CapturePage() {
 
   // Initialize canvas with template background - 660×1800 pixels at 300 DPI (2.2×6 inch)
   const initializeCanvas = useCallback(() => {
+    // CRITICAL: Don't clear canvas if it's protected during submission
+    if (isCanvasProtected) {
+      console.log('🛡️ Canvas protected - skipping initialization to prevent blank strips');
+      return;
+    }
+
     if (canvasRef.current) {
       const ctx = canvasRef.current.getContext("2d");
       const width = 660;   // 2.2 inches × 300 DPI - MATCHES PRINT CSS
@@ -135,7 +142,7 @@ export default function CapturePage() {
         addBeautifulText(ctx);
       }
     }
-  }, [settings.template, cachedTemplate]);
+  }, [settings.template, cachedTemplate, isCanvasProtected]);
 
   // Create a default background when no template is available
   const createDefaultBackground = useCallback((ctx, width, height) => {
@@ -254,13 +261,16 @@ export default function CapturePage() {
     return () => clearInterval(interval);
   }, [loadSettings]);
 
-  // Initialize canvas when settings change
+  // Initialize canvas when settings change (CRITICAL FIX: Don't clear during capture)
   useEffect(() => {
-    if (canvasRef.current) {
-      console.log('🔄 Settings changed, redrawing canvas...');
+    if (canvasRef.current && capturedPhotos.length === 0 && steps === 0) {
+      // Only reinitialize if no photos are captured and not in progress
+      console.log('🔄 Settings changed, redrawing canvas (no photos captured)...');
       initializeCanvas();
+    } else if (capturedPhotos.length > 0 || steps > 0) {
+      console.log('⚠️ Settings changed but photos captured - NOT clearing canvas to prevent blank strips');
     }
-  }, [settings.template, settings.textStyle, settings.eventName, initializeCanvas]);
+  }, [settings.template, settings.textStyle, settings.eventName, initializeCanvas, capturedPhotos.length, steps]);
 
   // Photo boxes layout with optimized dimensions
   const addBeautifulText = (ctx) => {
@@ -603,10 +613,12 @@ export default function CapturePage() {
           console.log('✅ Canvas state restored after camera switch');
         };
         img.src = canvasBackup;
-      } else {
-        // Reinitialize canvas if no backup available
-        console.log('🔄 Reinitializing canvas after camera switch');
+      } else if (capturedPhotos.length === 0 && steps === 0) {
+        // Only reinitialize if no photos are captured
+        console.log('🔄 Reinitializing canvas after camera switch (no photos captured)');
         initializeCanvas();
+      } else {
+        console.log('⚠️ Camera switch but photos captured - NOT clearing canvas to prevent blank strips');
       }
 
       console.log('✅ Camera switch completed successfully');
@@ -993,6 +1005,96 @@ export default function CapturePage() {
     console.log(`📱 Mobile photo processed and placed in box ${steps + 1}`);
   };
 
+  // CRITICAL: Force canvas redraw with all photos to prevent blank strips
+  const forceCanvasRedrawWithPhotos = async () => {
+    if (!canvasRef.current || capturedPhotos.length === 0) {
+      console.log('⚠️ Cannot force redraw - no canvas or no photos');
+      return;
+    }
+
+    const ctx = canvasRef.current.getContext('2d');
+    console.log(`🔄 Force redrawing canvas with ${capturedPhotos.length} photos...`);
+
+    try {
+      if (settings.template) {
+        // Redraw with template
+        const templateImg = new Image();
+        templateImg.crossOrigin = 'anonymous';
+
+        await new Promise((resolve, reject) => {
+          templateImg.onload = async () => {
+            try {
+              // Clear and draw template
+              ctx.clearRect(0, 0, 660, 1800);
+              ctx.drawImage(templateImg, 0, 0, 660, 1800);
+              console.log('✅ Template redrawn for force redraw');
+
+              // Draw all photos synchronously
+              const photoPromises = capturedPhotos.map((photo, index) => {
+                return new Promise((photoResolve) => {
+                  const photoImg = new Image();
+                  photoImg.crossOrigin = 'anonymous';
+                  photoImg.onload = () => {
+                    ctx.drawImage(photoImg, 0, 0, 520, 385, photo.x, photo.y, 520, 385);
+                    console.log(`✅ Force redraw: Photo ${index + 1} drawn at x:${photo.x}, y:${photo.y}`);
+                    photoResolve();
+                  };
+                  photoImg.onerror = () => {
+                    console.error(`❌ Force redraw: Failed to load photo ${index + 1}`);
+                    photoResolve(); // Continue even if photo fails
+                  };
+                  photoImg.src = photo.data;
+                });
+              });
+
+              await Promise.all(photoPromises);
+              addBeautifulText(ctx);
+              console.log('✅ Force redraw with template completed');
+              resolve();
+            } catch (error) {
+              reject(error);
+            }
+          };
+          templateImg.onerror = () => reject(new Error('Template load failed in force redraw'));
+          templateImg.src = settings.template;
+        });
+      } else {
+        // Redraw with default background
+        createDefaultBackground(ctx, 660, 1800);
+        console.log('✅ Default background redrawn for force redraw');
+
+        // Draw all photos synchronously
+        const photoPromises = capturedPhotos.map((photo, index) => {
+          return new Promise((photoResolve) => {
+            const photoImg = new Image();
+            photoImg.onload = () => {
+              ctx.drawImage(photoImg, 0, 0, 520, 385, photo.x, photo.y, 520, 385);
+              console.log(`✅ Force redraw: Photo ${index + 1} drawn (no template) at x:${photo.x}, y:${photo.y}`);
+              photoResolve();
+            };
+            photoImg.onerror = () => {
+              console.error(`❌ Force redraw: Failed to load photo ${index + 1}`);
+              photoResolve(); // Continue even if photo fails
+            };
+            photoImg.src = photo.data;
+          });
+        });
+
+        await Promise.all(photoPromises);
+        addBeautifulText(ctx);
+        console.log('✅ Force redraw without template completed');
+      }
+
+      // Wait a bit more to ensure everything is rendered
+      await new Promise(resolve => setTimeout(resolve, 500));
+      console.log('✅ Force canvas redraw completed successfully');
+
+    } catch (error) {
+      console.error('❌ Force canvas redraw failed:', error);
+      throw new Error('Failed to redraw canvas with photos');
+    }
+  };
+
   const startCapture = () => {
     if (steps >= 3 || isProcessing) return;
 
@@ -1303,6 +1405,7 @@ export default function CapturePage() {
 
     try {
       setIsSubmitting(true);
+      setIsCanvasProtected(true); // CRITICAL: Protect canvas from being cleared
       setNotification(null);
 
       console.log('🚀 Starting strip submission...');
@@ -1311,10 +1414,17 @@ export default function CapturePage() {
       console.log('📝 Event name:', settings.eventName);
       setRetryStatus(null); // Clear any previous retry status
 
-      // Validate canvas has content before submitting
+      // CRITICAL: Validate canvas has content before submitting
       if (!canvasRef.current) {
         throw new Error('Canvas not available');
       }
+
+      // CRITICAL: Ensure we have captured photos before submission
+      if (capturedPhotos.length === 0) {
+        throw new Error('No photos captured - cannot submit blank strip');
+      }
+
+      console.log(`🔍 Pre-submission validation: ${capturedPhotos.length} photos captured`);
 
       // Wait for canvas to be fully rendered (CRITICAL: Longer wait for photo loading)
       console.log('⏳ Waiting for canvas to be fully rendered...');
@@ -1335,6 +1445,10 @@ export default function CapturePage() {
         await new Promise(resolve => setTimeout(resolve, 2000)); // Additional 2 seconds
       }
 
+      // CRITICAL: Force canvas redraw with all photos before submission
+      console.log('🔄 Force redrawing canvas with all photos before submission...');
+      await forceCanvasRedrawWithPhotos();
+
       // Double-check canvas is still ready
       if (!canvasRef.current) {
         throw new Error('Canvas not ready after delay');
@@ -1350,13 +1464,49 @@ export default function CapturePage() {
         imageData = ctx.getImageData(0, 0, canvasRef.current.width, canvasRef.current.height);
         const pixels = imageData.data;
 
-        // Check if canvas has non-transparent pixels
-        for (let i = 3; i < pixels.length; i += 4) { // Check alpha channel every 4th byte
-          if (pixels[i] > 0) { // If alpha > 0, there's content
-            hasContent = true;
-            break;
+        // ENHANCED: Check specific photo box areas for content
+        const photoPositions = [90, 515, 940];
+        const photoWidth = 520;
+        const photoHeight = 385;
+        const photoX = (660 - photoWidth) / 2;
+
+        let photosDetected = 0;
+
+        // Check each photo box area for non-template content
+        for (let boxIndex = 0; boxIndex < photoPositions.length; boxIndex++) {
+          const photoY = photoPositions[boxIndex];
+          let boxHasContent = false;
+
+          // Sample pixels in the center of each photo box
+          const sampleX = photoX + photoWidth / 2;
+          const sampleY = photoY + photoHeight / 2;
+          const pixelIndex = (Math.floor(sampleY) * 660 + Math.floor(sampleX)) * 4;
+
+          if (pixelIndex < pixels.length) {
+            const r = pixels[pixelIndex];
+            const g = pixels[pixelIndex + 1];
+            const b = pixels[pixelIndex + 2];
+            const a = pixels[pixelIndex + 3];
+
+            // Check if pixel is not just template background
+            if (a > 0 && (r !== 0 || g !== 0 || b !== 0)) {
+              boxHasContent = true;
+              photosDetected++;
+            }
           }
+
+          console.log(`📊 Photo box ${boxIndex + 1} content detected: ${boxHasContent}`);
         }
+
+        hasContent = photosDetected > 0;
+        console.log(`📊 Enhanced validation: ${photosDetected}/${capturedPhotos.length} photos detected in canvas`);
+
+        // If we have captured photos but none detected, this is a problem
+        if (capturedPhotos.length > 0 && photosDetected === 0) {
+          console.error('❌ CRITICAL: Photos captured but none detected in canvas!');
+          hasContent = false; // Force redraw
+        }
+
       } catch (error) {
         console.warn('⚠️ Canvas tainted, cannot validate content with getImageData:', error.message);
         console.log('🔍 Canvas taint debug info:', {
@@ -1371,7 +1521,7 @@ export default function CapturePage() {
       }
 
       if (!hasContent) {
-        console.error('❌ Canvas appears to be blank');
+        console.error('❌ Canvas appears to be blank - FORCING REDRAW');
         console.log('🔍 Canvas debug info:', {
           width: canvasRef.current.width,
           height: canvasRef.current.height,
@@ -1379,6 +1529,18 @@ export default function CapturePage() {
           isCanvasReady: isCanvasReady,
           hasTemplate: !!settings.template
         });
+
+        // CRITICAL: If we have photos but canvas is blank, force redraw
+        if (capturedPhotos.length > 0) {
+          console.log('🔄 CRITICAL: Forcing emergency canvas redraw...');
+          await forceCanvasRedrawWithPhotos();
+
+          // Re-validate after forced redraw
+          console.log('🔍 Re-validating canvas after emergency redraw...');
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        } else {
+          throw new Error('No photos captured - cannot submit blank strip');
+        }
 
         // CRITICAL FIX: Force synchronous canvas redraw
         console.log('🔄 Attempting to redraw canvas synchronously...');
@@ -1465,6 +1627,13 @@ export default function CapturePage() {
       }
 
       console.log('✅ Canvas validation passed - content detected');
+
+      // FINAL VALIDATION: Ensure we still have the expected number of photos
+      if (capturedPhotos.length === 0) {
+        throw new Error('CRITICAL: No photos in capturedPhotos array before extraction');
+      }
+
+      console.log(`✅ Final validation: ${capturedPhotos.length} photos confirmed before data extraction`);
 
       let dataUrl;
       try {
@@ -1554,10 +1723,16 @@ export default function CapturePage() {
         message: "✅ Thank you! Your photo strip has been sent for print."
       });
 
-      setSteps(0);
-      setCapturedPhotos([]); // Clear captured photos
-      setIsCanvasReady(false); // Reset canvas ready state
-      initializeCanvas(); // Clear and reinitialize with background
+      // CRITICAL FIX: Don't clear canvas immediately after submission
+      // Wait a bit before clearing to ensure upload is complete
+      setTimeout(() => {
+        setIsCanvasProtected(false); // Unprotect canvas
+        setSteps(0);
+        setCapturedPhotos([]); // Clear captured photos
+        setIsCanvasReady(false); // Reset canvas ready state
+        initializeCanvas(); // Clear and reinitialize with background
+        console.log('🔄 Canvas cleared after successful submission');
+      }, 2000); // Wait 2 seconds before clearing
     } catch (error) {
       console.error("❌ Upload failed after retries:", {
         error: error.message,
@@ -1586,6 +1761,7 @@ export default function CapturePage() {
       });
     } finally {
       setIsSubmitting(false);
+      setIsCanvasProtected(false); // Unprotect canvas even if submission fails
     }
   };
 
@@ -1847,9 +2023,9 @@ export default function CapturePage() {
             <div className="mt-6 sm:mt-8 mobile-controls desktop-submit-spacing">
               <button
                 onClick={submit}
-                disabled={steps < 3 || isSubmitting}
+                disabled={steps < 3 || isSubmitting || capturedPhotos.length === 0}
                 className={`w-full py-4 sm:py-5 px-6 rounded-2xl font-bold text-lg sm:text-xl transition-all duration-300 transform relative overflow-hidden mobile-button ${
-                  steps >= 3 && !isSubmitting
+                  steps >= 3 && !isSubmitting && capturedPhotos.length > 0
                     ? 'bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500 hover:from-emerald-600 hover:via-green-600 hover:to-teal-600 text-white shadow-2xl hover:shadow-emerald-500/25 hover:scale-105 active:scale-95'
                     : 'bg-gradient-to-r from-gray-600 to-gray-700 text-gray-400 cursor-not-allowed'
                 }`}
