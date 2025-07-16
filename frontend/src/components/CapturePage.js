@@ -30,7 +30,6 @@ export default function CapturePage() {
   const [showNextPhotoMessage, setShowNextPhotoMessage] = useState(false);
   const [useMobileCamera, setUseMobileCamera] = useState(false); // Toggle for mobile camera mode
   const [settings, setSettings] = useState({
-    eventName: '',
     template: null // Template image instead of background color
   });
   const [notification, setNotification] = useState(null);
@@ -177,17 +176,7 @@ export default function CapturePage() {
       const response = await axios.get(`${API_BASE_URL}/api/settings`);
 
       const backendSettings = {
-        eventName: response.data.eventName || '',
-        template: response.data.templateUrl || null, // Use templateUrl from backend
-        textStyle: response.data.textStyle || {
-          fontSize: 60, // Bigger default size
-          fontFamily: 'Arial',
-          fontWeight: 'bold',
-          textColor: '#8B5CF6',
-          textShadow: true,
-          textGradient: true,
-          decorativeLine: false // Remove decorative line
-        }
+        template: response.data.templateUrl || null // Use templateUrl from backend
       };
 
       console.log('✅ Backend settings loaded successfully');
@@ -223,14 +212,12 @@ export default function CapturePage() {
           // Even if no settings, use cached template
           console.log('💾 Using cached template only');
           setSettings({
-            eventName: '',
             template: savedTemplate
           });
           setCachedTemplate(savedTemplate);
         } else {
           console.log('⚠️ No fallback settings found, using defaults');
           setSettings({
-            eventName: '',
             template: null
           });
         }
@@ -239,7 +226,6 @@ export default function CapturePage() {
         // Try to use cached template even if parsing fails
         const savedTemplate = localStorage.getItem('cachedTemplate');
         setSettings({
-          eventName: '',
           template: savedTemplate || null
         });
         setCachedTemplate(savedTemplate);
@@ -270,7 +256,7 @@ export default function CapturePage() {
     } else if (capturedPhotos.length > 0 || steps > 0) {
       console.log('⚠️ Settings changed but photos captured - NOT clearing canvas to prevent blank strips');
     }
-  }, [settings.template, settings.textStyle, settings.eventName, initializeCanvas, capturedPhotos.length, steps]);
+  }, [settings.template, initializeCanvas, capturedPhotos.length, steps]);
 
   // Photo boxes layout with optimized dimensions
   const addBeautifulText = (ctx) => {
@@ -301,115 +287,7 @@ export default function CapturePage() {
       ctx.restore();
     });
 
-    // Custom stylish event name with user settings
-    if (settings.eventName) {
-      const textAreaY = 1420; // Start text area after photos (960 + 420 + margin)
-      const textStyle = settings.textStyle || {
-        fontSize: 60, // Bigger default size
-        fontFamily: 'Arial',
-        fontWeight: 'bold',
-        textColor: '#8B5CF6',
-        textShadow: true,
-        textGradient: true,
-        decorativeLine: false // Remove decorative line
-      };
-
-      // Apply text styling
-
-      // Main title with custom styling
-      ctx.save();
-
-      // Apply solid color for better visibility (no white background)
-      ctx.fillStyle = textStyle.textColor;
-      // Applied solid color
-
-      // Smart font sizing - automatically adjust to fit within strip width
-      const fontFamily = textStyle.fontFamily || 'Arial';
-      let fontSize = textStyle.fontSize || 60;
-      const fontWeight = textStyle.fontWeight || 'bold';
-      const maxWidth = canvasWidth - 40; // Leave 20px margin on each side
-
-      // Start with desired font size and reduce if text doesn't fit
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-
-      let finalFontSize = fontSize;
-      let textWidth = 0;
-
-      // Test different font sizes to find the biggest that fits
-      for (let testSize = fontSize; testSize >= 24; testSize -= 2) {
-        ctx.font = `${fontWeight} ${testSize}px "${fontFamily}", Arial, sans-serif`;
-        textWidth = ctx.measureText(settings.eventName).width;
-
-        if (textWidth <= maxWidth) {
-          finalFontSize = testSize;
-          break;
-        }
-      }
-
-      // Apply the final font size
-      ctx.font = `${fontWeight} ${finalFontSize}px "${fontFamily}", Arial, sans-serif`;
-
-      // Smart font sizing applied
-
-      // Add text stroke (outline) for better visibility against any background
-      ctx.strokeStyle = 'rgba(0, 0, 0, 0.8)'; // Dark outline
-      ctx.lineWidth = Math.max(2, finalFontSize * 0.03); // Proportional outline width
-      ctx.lineJoin = 'round';
-      ctx.miterLimit = 2;
-
-      // Text shadow based on user preference
-      if (textStyle.textShadow) {
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
-        ctx.shadowBlur = Math.max(8, finalFontSize * 0.12);
-        ctx.shadowOffsetX = Math.max(4, finalFontSize * 0.06);
-        ctx.shadowOffsetY = Math.max(4, finalFontSize * 0.06);
-        // Applied text shadow for visibility
-      } else {
-        ctx.shadowColor = 'transparent';
-        ctx.shadowBlur = 0;
-        ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 0;
-      }
-
-      // Draw text with outline first, then fill
-      ctx.strokeText(settings.eventName, canvasWidth / 2, textAreaY + 60);
-      ctx.fillText(settings.eventName, canvasWidth / 2, textAreaY + 60);
-      // Main title drawn successfully
-      ctx.restore();
-
-      // No decorative line - cleaner design
-
-      // Date at bottom of strip with more space and bigger size
-      ctx.save();
-      ctx.fillStyle = textStyle.textColor;
-      const dateSize = 32; // Fixed bigger size for better visibility
-      ctx.font = `normal ${dateSize}px "Arial", sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-
-      // Strong shadow for date text visibility
-      if (textStyle.textShadow) {
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
-        ctx.shadowBlur = 4;
-        ctx.shadowOffsetX = 2;
-        ctx.shadowOffsetY = 2;
-      }
-
-      // Get current date
-      const currentDate = new Date();
-      const dateString = currentDate.toLocaleDateString('en-GB', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-      });
-
-      // Position date at bottom of strip - adjusted for bigger photos
-      const dateY = 2050; // Closer to bottom for bigger photos
-      ctx.fillText(dateString, canvasWidth / 2, dateY);
-      // Date drawn successfully
-      ctx.restore();
-    }
+    // Event name removed - no text added to strips anymore
   };
 
   // Force landscape orientation on mobile devices
@@ -1405,7 +1283,7 @@ export default function CapturePage() {
       console.log('🚀 Starting strip submission...');
       console.log('📊 Captured photos count:', capturedPhotos.length);
       console.log('🎨 Template available:', !!settings.template);
-      console.log('📝 Event name:', settings.eventName);
+      console.log('📝 Event name: removed');
       setRetryStatus(null); // Clear any previous retry status
 
       // CRITICAL: Validate canvas has content before submitting
@@ -1709,7 +1587,6 @@ export default function CapturePage() {
 
       await uploadAxios.post(`${API_BASE_URL}/api/strips`, {
         image: dataUrl,
-        eventName: settings.eventName,
         template: settings.template
       });
 

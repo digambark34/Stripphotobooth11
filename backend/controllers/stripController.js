@@ -3,7 +3,7 @@ const cloudinary = require('../config/cloudinary');
 
 exports.uploadStrip = async (req, res) => {
   try {
-    const { image, eventName, template } = req.body;
+    const { image, template } = req.body;
 
     // ✅ Enhanced Validation
     if (!image) {
@@ -28,7 +28,6 @@ exports.uploadStrip = async (req, res) => {
     // ✅ Save to MongoDB
     const newStrip = new Strip({
       imageUrl: uploadResult.secure_url,
-      eventName,
       template: template
     });
 

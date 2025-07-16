@@ -10,18 +10,7 @@ export default function AdminDashboard() {
   const [printingStrip, setPrintingStrip] = useState(null);
   const [notification, setNotification] = useState(null);
   const [settings, setSettings] = useState({
-    eventName: '',
-    template: null, // Template image instead of background color
-    // Text styling options
-    textStyle: {
-      fontSize: 60, // Bigger default size
-      fontFamily: 'Arial',
-      fontWeight: 'bold',
-      textColor: '#8B5CF6',
-      textShadow: true,
-      textGradient: true,
-      decorativeLine: false // Remove decorative line by default
-    }
+    template: null // Template image only
   });
   const [showSettings, setShowSettings] = useState(false);
 
@@ -30,22 +19,9 @@ export default function AdminDashboard() {
 
   // Login bypassed - direct admin access
 
-  const handleSettingsChange = (field, value) => {
-    setSettings(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
+  // handleSettingsChange removed - no longer needed without event name
 
-  const handleTextStyleChange = (styleField, value) => {
-    setSettings(prev => ({
-      ...prev,
-      textStyle: {
-        ...prev.textStyle,
-        [styleField]: value
-      }
-    }));
-  };
+  // handleTextStyleChange removed - no longer needed
 
 
 
@@ -131,9 +107,7 @@ export default function AdminDashboard() {
 
       // Save settings to backend (MongoDB + Cloudinary if template included)
       const response = await axios.put(`${API_BASE_URL}/api/settings`, {
-        eventName: settings.eventName,
-        template: settings.template,
-        textStyle: settings.textStyle
+        template: settings.template
       });
       console.log('✅ Settings save response:', response.data);
 
@@ -161,17 +135,7 @@ export default function AdminDashboard() {
     try {
       const response = await axios.get(`${API_BASE_URL}/api/settings`);
       setSettings({
-        eventName: response.data.eventName || '',
-        template: response.data.templateUrl || null,
-        textStyle: response.data.textStyle || {
-          fontSize: 60, // Bigger default size
-          fontFamily: 'Arial',
-          fontWeight: 'bold',
-          textColor: '#8B5CF6',
-          textShadow: true,
-          textGradient: true,
-          decorativeLine: false // Remove decorative line
-        }
+        template: response.data.templateUrl || null
       });
     } catch (error) {
       console.error('Failed to load settings:', error);
@@ -220,7 +184,7 @@ export default function AdminDashboard() {
       // Create download link
       const link = document.createElement('a');
       link.href = url;
-      link.download = `photo-strip-${strip.eventName || 'untitled'}-${new Date(strip.timestamp).toLocaleDateString().replace(/\//g, '-')}.jpg`;
+      link.download = `photo-strip-${new Date(strip.timestamp).toLocaleDateString().replace(/\//g, '-')}.jpg`;
 
       // Trigger download
       document.body.appendChild(link);
@@ -418,202 +382,11 @@ export default function AdminDashboard() {
               </div>
 
               <div className="grid gap-8">
-                {/* Enhanced Event Name */}
-                <div className="bg-white/5 backdrop-blur-lg rounded-2xl p-6 border border-white/10 hover:border-white/20 transition-all duration-300 group">
-                  <label className="flex items-center text-white font-bold mb-4 text-lg">
-                    <div className="bg-gradient-to-r from-yellow-400 to-orange-400 p-3 rounded-xl mr-4 shadow-lg group-hover:scale-110 transition-transform duration-300">
-                      <span className="text-xl">🎉</span>
-                    </div>
-                    <div>
-                      <span>Event Name</span>
-                      <span className="text-white/60 text-sm font-normal block">Optional - appears on photo strips</span>
-                    </div>
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={settings.eventName}
-                      onChange={(e) => handleSettingsChange('eventName', e.target.value)}
-                      placeholder="e.g., Wedding Reception, Birthday Party..."
-                      className="w-full px-6 py-4 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent transition-all duration-300 text-lg"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/10 to-orange-500/10 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
-                  </div>
-                </div>
+                {/* Event Name - REMOVED */}
 
-                {/* Text Styling Options */}
-                <div className="bg-white/5 backdrop-blur-lg rounded-2xl p-6 border border-white/10 hover:border-white/20 transition-all duration-300 group">
-                  <label className="flex items-center text-white font-bold mb-6 text-lg">
-                    <div className="bg-gradient-to-r from-purple-400 to-pink-400 p-3 rounded-xl mr-4 shadow-lg group-hover:scale-110 transition-transform duration-300">
-                      <span className="text-xl">✨</span>
-                    </div>
-                    <div>
-                      <span>Text Styling</span>
-                      <span className="text-white/60 text-sm font-normal block">Customize event name appearance</span>
-                    </div>
-                  </label>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Font Size */}
-                    <div>
-                      <label className="block text-white/80 text-sm font-medium mb-2">Font Size (Auto-fits to strip width)</label>
-                      <input
-                        type="range"
-                        min="40"
-                        max="120"
-                        value={settings.textStyle.fontSize}
-                        onChange={(e) => handleTextStyleChange('fontSize', parseInt(e.target.value))}
-                        className="w-full h-2 bg-white/20 rounded-lg appearance-none cursor-pointer slider"
-                      />
-                      <div className="text-white/60 text-xs mt-1">{settings.textStyle.fontSize}px (Smart sizing ensures text fits perfectly)</div>
-                    </div>
-
-                    {/* Font Family */}
-                    <div>
-                      <label className="block text-white/80 text-sm font-medium mb-2">Font Style</label>
-                      <select
-                        value={settings.textStyle.fontFamily}
-                        onChange={(e) => handleTextStyleChange('fontFamily', e.target.value)}
-                        className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-400"
-                      >
-                        <option value="Arial">Arial (Modern & Clean)</option>
-                        <option value="Georgia">Georgia (Elegant Serif)</option>
-                        <option value="Times New Roman">Times New Roman (Classic)</option>
-                        <option value="Helvetica">Helvetica (Professional)</option>
-                        <option value="Verdana">Verdana (Bold & Clear)</option>
-                        <option value="Trebuchet MS">Trebuchet MS (Stylish)</option>
-                        <option value="Palatino">Palatino (Sophisticated)</option>
-                        <option value="Garamond">Garamond (Traditional)</option>
-                        <option value="Book Antiqua">Book Antiqua (Vintage)</option>
-                        <option value="Lucida Grande">Lucida Grande (Friendly)</option>
-                        <option value="Tahoma">Tahoma (Compact)</option>
-                        <option value="Courier New">Courier New (Typewriter)</option>
-                        <option value="Impact">Impact (Bold Statement)</option>
-                        <option value="Comic Sans MS">Comic Sans MS (Playful)</option>
-                        <option value="Brush Script MT">Brush Script MT (Handwritten)</option>
-                        <option value="Lucida Handwriting">Lucida Handwriting (Script)</option>
-                      </select>
-                    </div>
-
-                    {/* Font Weight */}
-                    <div>
-                      <label className="block text-white/80 text-sm font-medium mb-2">Font Weight</label>
-                      <select
-                        value={settings.textStyle.fontWeight}
-                        onChange={(e) => handleTextStyleChange('fontWeight', e.target.value)}
-                        className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-400"
-                      >
-                        <option value="normal">Normal</option>
-                        <option value="bold">Bold</option>
-                        <option value="bolder">Extra Bold</option>
-                      </select>
-                    </div>
-
-                    {/* Text Color */}
-                    <div>
-                      <label className="block text-white/80 text-sm font-medium mb-2">Text Color</label>
-                      <input
-                        type="color"
-                        value={settings.textStyle.textColor}
-                        onChange={(e) => handleTextStyleChange('textColor', e.target.value)}
-                        className="w-full h-10 bg-white/10 border border-white/20 rounded-lg cursor-pointer"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Toggle Options */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-                    <label className="flex items-center space-x-3 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={settings.textStyle.textShadow}
-                        onChange={(e) => handleTextStyleChange('textShadow', e.target.checked)}
-                        className="w-5 h-5 text-purple-600 bg-white/10 border-white/20 rounded focus:ring-purple-500"
-                      />
-                      <span className="text-white/80">Text Shadow</span>
-                    </label>
-
-                    <label className="flex items-center space-x-3 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={settings.textStyle.textGradient}
-                        onChange={(e) => handleTextStyleChange('textGradient', e.target.checked)}
-                        className="w-5 h-5 text-purple-600 bg-white/10 border-white/20 rounded focus:ring-purple-500"
-                      />
-                      <span className="text-white/80">Gradient Effect</span>
-                    </label>
-                  </div>
-
-                  {/* Enhanced Preview */}
-                  {settings.eventName && (
-                    <div className="mt-6 p-6 bg-white/5 rounded-xl border border-white/10">
-                      <p className="text-white/80 text-sm font-medium mb-4">Live Preview:</p>
-                      <div className="bg-gradient-to-r from-purple-900/50 to-pink-900/50 p-6 rounded-lg">
-                        <div
-                          className="text-center"
-                          style={{
-                            fontSize: `${Math.min(settings.textStyle.fontSize * 0.4, 28)}px`,
-                            fontFamily: settings.textStyle.fontFamily,
-                            fontWeight: settings.textStyle.fontWeight,
-                            color: settings.textStyle.textGradient ? 'transparent' : settings.textStyle.textColor,
-                            background: settings.textStyle.textGradient
-                              ? `linear-gradient(45deg, ${settings.textStyle.textColor}, #EC4899, #F59E0B)`
-                              : 'none',
-                            WebkitBackgroundClip: settings.textStyle.textGradient ? 'text' : 'initial',
-                            backgroundClip: settings.textStyle.textGradient ? 'text' : 'initial',
-                            textShadow: settings.textStyle.textShadow ? '3px 3px 6px rgba(0,0,0,0.6)' : 'none',
-                            marginBottom: '8px'
-                          }}
-                        >
-                          {settings.eventName}
-                        </div>
+                {/* Text Styling - REMOVED */}
 
 
-                        <div className="mt-6 pt-4 border-t border-white/20">
-                          <div
-                            className="text-center"
-                            style={{
-                              fontSize: '18px', // Fixed bigger size for preview
-                              fontFamily: 'Arial, sans-serif',
-                              fontStyle: 'normal',
-                              color: settings.textStyle.textColor,
-                              fontWeight: 'normal',
-                              textShadow: settings.textStyle.textShadow ? '2px 2px 4px rgba(0,0,0,0.5)' : 'none'
-                            }}
-                          >
-                            {new Date().toLocaleDateString('en-GB', {
-                              day: '2-digit',
-                              month: '2-digit',
-                              year: 'numeric'
-                            })}
-                          </div>
-                          <div className="text-xs text-white/50 mt-1 text-center">
-                            (Date appears at bottom of strip)
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="mt-3 text-xs text-white/60 text-center">
-                        Font: {settings.textStyle.fontFamily} • Size: {settings.textStyle.fontSize}px •
-                        {settings.textStyle.textGradient ? ' Gradient' : ' Solid'} •
-                        {settings.textStyle.textShadow ? ' Shadow' : ' No Shadow'}
-                      </div>
-
-                      <div className="mt-4 text-center">
-                        <button
-                          onClick={saveSettings}
-                          className="px-6 py-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-lg font-medium transition-all duration-300 transform hover:scale-105"
-                        >
-                          💾 Apply Text Styling
-                        </button>
-
-                        <div className="mt-3 text-xs text-white/60 text-center">
-                          💡 Tip: Text styling applies to new photo strips. Capture page updates automatically.
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
 
                 {/* Enhanced Template Upload */}
                 <div className="bg-white/5 backdrop-blur-lg rounded-2xl p-6 border border-white/10 hover:border-white/20 transition-all duration-300 group">
@@ -834,7 +607,7 @@ export default function AdminDashboard() {
                 <div className="relative mb-3 sm:mb-4">
                   <img
                     src={s.imageUrl}
-                    alt={s.eventName || 'Photo strip'}
+                    alt="Photo strip"
                     className="w-full h-32 sm:h-40 lg:h-48 object-cover rounded-lg sm:rounded-xl shadow-lg"
                     onError={(e) => {
                       // Fallback to placeholder image
@@ -852,7 +625,7 @@ export default function AdminDashboard() {
                 {/* Info */}
                 <div className="mb-3 sm:mb-4">
                   <h4 className="text-white font-bold text-sm sm:text-base lg:text-lg mb-1 line-clamp-2">
-                    {s.eventName || 'Untitled Event'}
+                    Photo Strip
                   </h4>
                   <p className="text-gray-300 text-xs sm:text-sm">
                     📅 {new Date(s.timestamp).toLocaleDateString()}
