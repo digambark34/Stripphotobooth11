@@ -1223,28 +1223,7 @@ export default function CapturePage() {
 
 
 
-            {/* Mobile Camera Interface */}
-            <div className="w-full rounded-lg shadow-2xl border-2 border-white/20 bg-gradient-to-br from-purple-900/50 to-pink-900/50 backdrop-blur-lg flex items-center justify-center"
-              style={{
-                height: '60vh',
-                minHeight: '400px',
-                maxHeight: '60vh'
-              }}
-            >
-              <div className="text-center text-white p-8">
-                <div className="text-6xl mb-4">📱</div>
-                <h3 className="text-2xl font-bold mb-2">Mobile Camera Mode</h3>
-                <p className="text-lg opacity-90 mb-4">Tap "Take Photo" to capture photos directly</p>
-                <div className="text-sm opacity-75">
-                  <p>✅ Works on Android & iPhone</p>
-                  <p>✅ Direct camera access</p>
-                  <p>✅ High quality photos</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Frame overlay to help users stay in frame */}
-            <div className="absolute inset-2 border-2 border-white/30 rounded-lg pointer-events-none"></div>
+            {/* Mobile camera info section removed */}
 
 
 
