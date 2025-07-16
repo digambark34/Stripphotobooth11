@@ -23,12 +23,10 @@ axiosRetry(axios, {
 // Only critical uploads will have specific timeouts
 
 export default function CapturePage() {
-  const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const [steps, setSteps] = useState(0);
-  const [currentCamera, setCurrentCamera] = useState('environment'); // 'user' for front, 'environment' for back
   const [showNextPhotoMessage, setShowNextPhotoMessage] = useState(false);
-  const [useMobileCamera, setUseMobileCamera] = useState(false); // Toggle for mobile camera mode
+  const useMobileCamera = true; // Always use mobile camera now
   const [settings, setSettings] = useState({
     template: null // Template image instead of background color
   });
@@ -39,9 +37,9 @@ export default function CapturePage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false); // Processing delay between captures
   const [cachedTemplate, setCachedTemplate] = useState(null); // Cache template for offline use
-  const [isSwitchingCamera, setIsSwitchingCamera] = useState(false); // Track camera switching
   const [isCanvasReady, setIsCanvasReady] = useState(false); // Track canvas rendering state
   const [isCanvasProtected, setIsCanvasProtected] = useState(false); // Prevent canvas clearing during submission
+  const [isOffline, setIsOffline] = useState(false); // Track network status
 
   // Fallback API URL if environment variable is not set
   const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
@@ -333,182 +331,11 @@ export default function CapturePage() {
     };
   }, []);
 
-  // Enhanced camera initialization with better switching support
-  const initializeCamera = useCallback(async (facingMode = currentCamera) => {
-    try {
-      console.log(`📹 Starting camera initialization with facing mode: ${facingMode}`);
+  // Live camera removed - mobile camera only
 
-      // Stop existing stream properly
-      if (videoRef.current && videoRef.current.srcObject) {
-        const tracks = videoRef.current.srcObject.getTracks();
-        tracks.forEach(track => {
-          track.stop();
-          console.log(`🛑 Stopped ${track.kind} track`);
-        });
+  // Camera initialization removed
 
-        // Clear the video source
-        videoRef.current.srcObject = null;
-
-        // Wait for cleanup to complete
-        await new Promise(resolve => setTimeout(resolve, 200));
-      }
-
-      console.log(`📹 Requesting camera access for: ${facingMode}`);
-
-      // Maximum field of view for multiple people
-      const constraints = {
-        video: {
-          width: { ideal: 1920, min: 1280 },  // High resolution
-          height: { ideal: 1440, min: 960 },  // Taller for more people
-          facingMode: { ideal: facingMode },
-          frameRate: { ideal: 30, min: 15 }
-          // No aspect ratio constraints - use camera's natural view
-        }
-      };
-
-      let stream;
-      try {
-        stream = await navigator.mediaDevices.getUserMedia(constraints);
-      } catch (error) {
-        // Fallback: Try without exact aspect ratio if it fails
-        console.warn("Exact aspect ratio failed, trying fallback constraints:", error);
-        const fallbackConstraints = {
-          video: {
-            width: { ideal: 1920, min: 1280 },
-            height: { ideal: 1440, min: 960 },
-            facingMode: { ideal: facingMode },
-            frameRate: { ideal: 30, min: 15 }
-          }
-        };
-        stream = await navigator.mediaDevices.getUserMedia(fallbackConstraints);
-      }
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        console.log(`✅ Camera stream assigned to video element`);
-
-        // Enhanced video readiness validation (no timeout - let camera take time it needs)
-        await new Promise((resolve, reject) => {
-          const handleLoadedData = () => {
-            videoRef.current.removeEventListener('loadeddata', handleLoadedData);
-            videoRef.current.removeEventListener('error', handleError);
-            console.log(`📹 Video data loaded for ${facingMode} camera`);
-            resolve();
-          };
-
-          const handleError = (error) => {
-            videoRef.current.removeEventListener('loadeddata', handleLoadedData);
-            videoRef.current.removeEventListener('error', handleError);
-            reject(error);
-          };
-
-          videoRef.current.addEventListener('loadeddata', handleLoadedData);
-          videoRef.current.addEventListener('error', handleError);
-        });
-
-        // Wait for video dimensions to be available
-        await new Promise((resolve) => {
-          const checkDimensions = () => {
-            if (videoRef.current && videoRef.current.videoWidth > 0 && videoRef.current.videoHeight > 0) {
-              const video = videoRef.current;
-              const videoAspect = video.videoWidth / video.videoHeight;
-              const isLandscape = videoAspect >= 1.3;
-              console.log(`📹 Video ready - Resolution: ${video.videoWidth}x${video.videoHeight}, Aspect: ${videoAspect.toFixed(2)}, ${isLandscape ? 'Landscape ✅' : 'Portrait ❌'}`);
-              resolve();
-            } else {
-              setTimeout(checkDimensions, 100);
-            }
-          };
-          checkDimensions();
-        });
-
-        // Additional stabilization delay for camera switch
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
-        console.log(`✅ Camera fully initialized and ready for ${facingMode}`);
-      }
-    } catch (error) {
-      console.warn("Camera access error:", error);
-      setNotification({
-        type: "error",
-        message: `Camera access required. Please allow camera access and refresh the page. Error: ${error.message}`
-      });
-    }
-  }, [currentCamera]);
-
-  useEffect(() => {
-    initializeCamera();
-
-    // Cleanup function to stop camera when component unmounts
-    return () => {
-      if (videoRef.current && videoRef.current.srcObject) {
-        const tracks = videoRef.current.srcObject.getTracks();
-        tracks.forEach(track => track.stop());
-      }
-    };
-  }, [initializeCamera]);
-
-  // Enhanced camera switching function with canvas preservation
-  const switchCamera = useCallback(async () => {
-    try {
-      console.log('🔄 Starting camera switch...');
-
-      // Prevent captures during camera switch
-      setIsProcessing(true);
-      setIsSwitchingCamera(true);
-
-      // Store current canvas state before switching
-      let canvasBackup = null;
-      if (canvasRef.current) {
-        canvasBackup = canvasRef.current.toDataURL('image/png');
-        console.log('💾 Canvas state backed up before camera switch');
-      }
-
-      const newCamera = currentCamera === 'user' ? 'environment' : 'user';
-      console.log(`🔄 Switching to ${newCamera === 'user' ? 'front' : 'back'} camera`);
-
-      // Update camera state
-      setCurrentCamera(newCamera);
-
-      // Initialize new camera
-      await initializeCamera(newCamera);
-
-      // Wait additional time for camera to fully stabilize
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      // Restore canvas state if it was lost
-      if (canvasBackup && canvasRef.current) {
-        const img = new Image();
-        img.onload = () => {
-          const ctx = canvasRef.current.getContext('2d');
-          ctx.drawImage(img, 0, 0);
-          console.log('✅ Canvas state restored after camera switch');
-        };
-        img.src = canvasBackup;
-      } else if (capturedPhotos.length === 0 && steps === 0) {
-        // Only reinitialize if no photos are captured
-        console.log('🔄 Reinitializing canvas after camera switch (no photos captured)');
-        initializeCanvas();
-      } else {
-        console.log('⚠️ Camera switch but photos captured - NOT clearing canvas to prevent blank strips');
-      }
-
-      console.log('✅ Camera switch completed successfully');
-
-    } catch (error) {
-      console.error('❌ Camera switch failed:', error);
-      setNotification({
-        type: "error",
-        message: "Failed to switch camera. Please try again."
-      });
-    } finally {
-      // Re-enable captures after switch is complete
-      setTimeout(() => {
-        setIsProcessing(false);
-        setIsSwitchingCamera(false);
-      }, 500);
-    }
-  }, [currentCamera, initializeCamera, initializeCanvas]);
+  // Camera switching removed
 
   // Refresh page function
   const refreshPage = useCallback(() => {
@@ -575,21 +402,7 @@ export default function CapturePage() {
     };
   }, [refreshPage]);
 
-  // Check if video is ready for capture
-  const isVideoReady = useCallback(() => {
-    if (!videoRef.current) return false;
-
-    const video = videoRef.current;
-    const isReady = video.readyState >= 2 && // HAVE_CURRENT_DATA or higher
-                   video.videoWidth > 0 &&
-                   video.videoHeight > 0 &&
-                   !video.paused &&
-                   !video.ended;
-
-    // Video ready check performed
-
-    return isReady;
-  }, []);
+  // Live camera functions removed
 
   // Mobile camera capture function - SAME WORKFLOW AS LIVE CAMERA
   const handleMobileCameraCapture = async (e) => {
@@ -967,310 +780,11 @@ export default function CapturePage() {
     }
   };
 
-  const startCapture = () => {
-    if (steps >= 3 || isProcessing) return;
+  // Live camera capture removed
 
-    // Check if video is ready before starting capture
-    if (!isVideoReady()) {
-      setNotification({
-        type: "error",
-        message: "Camera is not ready yet. Please wait a moment and try again."
-      });
-      return;
-    }
+  // takePhoto function removed
 
-    // Start processing state
-    setIsProcessing(true);
-    console.log('📸 Taking photo with processing delay...');
-    takePhoto();
-  };
-
-  const takePhoto = async () => {
-    console.log('📸 Starting photo capture process...');
-
-    // Validate video and canvas are ready
-    if (!videoRef.current || !canvasRef.current) {
-      console.error('❌ Video or canvas not ready');
-      setNotification({
-        type: "error",
-        message: "Camera not ready. Please wait and try again."
-      });
-      return;
-    }
-
-    // Wait 500ms before drawing to canvas to ensure everything is ready
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    // Double-check canvas is still ready after delay
-    if (!canvasRef.current) {
-      console.error('❌ Canvas not ready after delay');
-      setNotification({
-        type: "error",
-        message: "Canvas not ready. Please try again."
-      });
-      return;
-    }
-
-    // Enhanced video readiness validation
-    const video = videoRef.current;
-    if (!video.videoWidth || !video.videoHeight || video.readyState < 2) {
-      console.error('❌ Video not fully loaded or switching cameras');
-      setNotification({
-        type: "error",
-        message: "Camera is switching. Please wait a moment and try again."
-      });
-      setIsProcessing(false);
-      return;
-    }
-
-    // Additional check for camera switch completion
-    if (video.videoWidth < 100 || video.videoHeight < 100) {
-      console.error('❌ Video dimensions too small, camera may still be switching');
-      setNotification({
-        type: "error",
-        message: "Camera is still initializing. Please wait and try again."
-      });
-      setIsProcessing(false);
-      return;
-    }
-
-    console.log(`📸 Video validated - ${video.videoWidth}x${video.videoHeight}, readyState: ${video.readyState}`);
-
-    const ctx = canvasRef.current.getContext("2d");
-    if (!ctx) {
-      console.error('❌ Canvas context not available');
-      return;
-    }
-
-    // Photo frames - MUST match addBeautifulText dimensions exactly
-    const photoWidth = 520;    // Match white box width exactly
-    const photoHeight = 385;   // Match white box height exactly (increased even more)
-    const photoX = (660 - photoWidth) / 2; // Center the photo boxes
-
-    // Y positions - increased gaps further, equal spacing maintained
-    const photoPositions = [
-      90,   // First photo box Y position (unchanged)
-      515,  // Second photo box Y position (increased gap further)
-      940   // Third photo box Y position (increased gap further)
-    ];
-
-    const photoY = photoPositions[steps] || photoPositions[0];
-
-    // Template background is preserved in all borders and gaps
-    // Only the exact photo areas will be filled with captured photos
-
-    // Capture current photo from video - fit exactly inside photo box
-    const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = photoWidth;   // Use exact photo width (540px - matches white box)
-    tempCanvas.height = photoHeight; // Use exact photo height (390px - matches white box)
-
-    // Ensure consistent scaling across environments
-    tempCanvas.style.width = photoWidth + 'px';
-    tempCanvas.style.height = photoHeight + 'px';
-
-    const tempCtx = tempCanvas.getContext('2d');
-
-    // Disable image smoothing for consistent pixel-perfect rendering
-    tempCtx.imageSmoothingEnabled = false;
-
-    // Get video dimensions with validation
-    const videoWidth = videoRef.current.videoWidth || videoRef.current.clientWidth;
-    const videoHeight = videoRef.current.videoHeight || videoRef.current.clientHeight;
-
-    // Validate video dimensions
-    if (!videoWidth || !videoHeight || videoWidth < 100 || videoHeight < 100) {
-      console.error('❌ Invalid video dimensions:', { videoWidth, videoHeight });
-      setNotification({
-        type: "error",
-        message: "Camera not ready. Please wait for camera to load and try again."
-      });
-      return;
-    }
-
-    // Photo capture dimensions calculated
-
-    // Strategy: Fit photos exactly inside the designated boxes
-    // Photos will be contained within the box boundaries
-
-    try {
-      if (videoWidth && videoHeight) {
-        // SMART CROP STRATEGY: Crop only bottom part to keep face visible
-        // This ensures heads/faces are always visible while filling the box
-
-        const videoAspect = videoWidth / videoHeight;
-        const boxAspect = photoWidth / photoHeight;
-
-        let sourceX = 0, sourceY = 0, sourceWidth = videoWidth, sourceHeight = videoHeight;
-
-        if (videoAspect > boxAspect) {
-          // Video is wider - crop sides to fit box height
-          sourceWidth = videoHeight * boxAspect;
-          sourceX = (videoWidth - sourceWidth) / 2;
-        } else {
-          // Video is taller - crop ONLY BOTTOM to fit box width (keep top/face visible)
-          sourceHeight = videoWidth / boxAspect;
-          sourceY = 0; // Start from top (keep face visible)
-          // sourceHeight will be less than videoHeight, cropping bottom only
-        }
-
-        // Draw cropped video to fill entire box without stretching
-        tempCtx.drawImage(
-          videoRef.current,
-          sourceX, sourceY, sourceWidth, sourceHeight, // Source: Cropped portion (bottom cropped)
-          0, 0, photoWidth, photoHeight // Destination: Fill entire box
-        );
-
-        console.log(`📸 Photo captured with smart crop (bottom only) - Video: ${videoWidth}x${videoHeight}, Cropped: ${sourceWidth}x${sourceHeight}, Box: ${photoWidth}x${photoHeight}`);
-      } else {
-        // Fallback: Direct stretch if dimensions not available
-        tempCtx.drawImage(
-          videoRef.current,
-          0, 0, photoWidth, photoHeight
-        );
-        console.log('📸 Photo captured with fallback stretch mode');
-      }
-    } catch (error) {
-      console.error('❌ Error capturing photo from video:', error);
-      setNotification({
-        type: "error",
-        message: "Failed to capture photo. Please try again."
-      });
-      return;
-    }
-
-    // Store the captured photo data for redrawing with template
-    let capturedPhotoData;
-    try {
-      capturedPhotoData = tempCanvas.toDataURL('image/jpeg', 0.9);
-      if (!capturedPhotoData || capturedPhotoData.length < 1000) {
-        throw new Error('Photo data too small or empty');
-      }
-    } catch (error) {
-      console.error('❌ Error converting photo to data URL:', error);
-      setNotification({
-        type: "error",
-        message: "Failed to process photo. Please try again."
-      });
-      return;
-    }
-
-    const newCapturedPhotos = [...capturedPhotos, { data: capturedPhotoData, x: photoX, y: photoY }];
-    setCapturedPhotos(newCapturedPhotos);
-    console.log(`✅ Photo ${steps + 1} captured successfully, data size: ${(capturedPhotoData.length / 1024).toFixed(1)}KB`);
-
-    // Redraw everything: template background + all photos + beautiful text
-    if (settings.template) {
-      const templateImg = new Image();
-      templateImg.crossOrigin = 'anonymous'; // Enable CORS for Cloudinary images
-      templateImg.onload = async () => {
-        // Ensure canvas is still ready before drawing
-        if (!canvasRef.current) return;
-
-        // First: Draw template background to fill entire canvas (preserves gradient)
-        ctx.drawImage(templateImg, 0, 0, 660, 1800);
-
-        // Then: Draw all captured photos on top (preserves template in gaps)
-        if (newCapturedPhotos.length === 0) {
-          console.warn('⚠️ No photos to draw on canvas');
-          addBeautifulText(ctx);
-          return;
-        }
-
-        // CRITICAL FIX: Use Promise.all to ensure ALL photos load before proceeding
-        const photoPromises = newCapturedPhotos.map((photo, index) => {
-          return new Promise((resolve, reject) => {
-            const photoImg = new Image();
-            photoImg.crossOrigin = 'anonymous'; // Enable CORS for photo data URLs
-
-            photoImg.onload = () => {
-              // Ensure canvas is still ready before drawing
-              if (!canvasRef.current) {
-                reject(new Error('Canvas lost during photo loading'));
-                return;
-              }
-
-              // Draw photo exactly within box boundaries
-              ctx.drawImage(photoImg, 0, 0, photoWidth, photoHeight, photo.x, photo.y, photoWidth, photoHeight);
-              console.log(`✅ Photo ${index + 1}/${newCapturedPhotos.length} drawn to canvas`);
-              resolve();
-            };
-
-            photoImg.onerror = () => {
-              console.error(`❌ Failed to load photo ${index + 1} for canvas`);
-              reject(new Error(`Failed to load photo ${index + 1}`));
-            };
-
-            photoImg.src = photo.data;
-          });
-        });
-
-        // Wait for ALL photos to load before adding text
-        try {
-          await Promise.all(photoPromises);
-          console.log('✅ ALL photos loaded successfully');
-
-          // Add text only after all photos are confirmed loaded
-          addBeautifulText(ctx);
-          setIsCanvasReady(true);
-          console.log('✅ All photos processed, text added, canvas ready');
-        } catch (error) {
-          console.error('❌ Some photos failed to load:', error);
-          // Still add text even if some photos failed
-          addBeautifulText(ctx);
-          setIsCanvasReady(true);
-          console.log('✅ Photos processed (some failed), text added, canvas ready');
-        }
-
-        // If no photos yet, still add text
-        if (newCapturedPhotos.length === 0) {
-          addBeautifulText(ctx);
-        }
-      };
-
-      templateImg.onerror = () => {
-        console.error('❌ Failed to load template for photo placement, using default background');
-        // Use default background instead of blank canvas
-        try {
-          createDefaultBackground(ctx, 660, 1800);
-          // Draw photo exactly within box boundaries
-          ctx.drawImage(tempCanvas, 0, 0, photoWidth, photoHeight, photoX, photoY, photoWidth, photoHeight);
-          addBeautifulText(ctx);
-          console.log('✅ Photo placed on default background - no blank strip!');
-        } catch (error) {
-          console.error('❌ Error in template fallback:', error);
-        }
-      };
-
-      templateImg.src = settings.template;
-    } else {
-      // If no template, use default background instead of transparent
-      console.log('📸 No template available, using default background for photo');
-      createDefaultBackground(ctx, 660, 1800);
-      // Draw photo exactly within box boundaries
-      ctx.drawImage(tempCanvas, 0, 0, photoWidth, photoHeight, photoX, photoY, photoWidth, photoHeight);
-      addBeautifulText(ctx);
-    }
-
-    // Photo placed in designated box
-
-    // Show "Next Photo" message after capture (except for the last photo)
-    if (steps < 2) {
-      setShowNextPhotoMessage(true);
-      setTimeout(() => {
-        setShowNextPhotoMessage(false);
-      }, 1500); // Show for 1.5 seconds
-    }
-
-    // No logo overlay - clean template with photos only
-
-    setSteps(steps + 1);
-
-    // Add processing delay to ensure proper strip generation
-    setTimeout(() => {
-      setIsProcessing(false);
-      console.log('✅ Processing complete, ready for next capture');
-    }, 2000); // 2 second delay between captures
-  };
+  // Live camera capture functions removed
 
   const submit = async () => {
     if (isSubmitting) return;
@@ -1709,61 +1223,32 @@ export default function CapturePage() {
 
 
 
-            {!useMobileCamera && (
-              <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                className="w-full rounded-lg shadow-2xl border-2 border-white/20 mobile-camera-video"
-                style={{
-                  width: '100%',
-                  height: '60vh', // Mobile: bigger height for multiple people
-                  minHeight: '400px', // Mobile: larger minimum height
-                  maxHeight: '60vh', // Mobile: larger maximum height
-                  objectFit: 'contain',
-                  transform: 'scale(1.1)',
-                  transformOrigin: 'top center'
-                }}
-              />
-            )}
-
-            {/* Mobile Camera Mode Placeholder */}
-            {useMobileCamera && (
-              <div className="w-full rounded-lg shadow-2xl border-2 border-white/20 bg-gradient-to-br from-purple-900/50 to-pink-900/50 backdrop-blur-lg flex items-center justify-center"
-                style={{
-                  height: '60vh',
-                  minHeight: '400px',
-                  maxHeight: '60vh'
-                }}
-              >
-                <div className="text-center text-white p-8">
-                  <div className="text-6xl mb-4">📱</div>
-                  <h3 className="text-2xl font-bold mb-2">Mobile Camera Mode</h3>
-                  <p className="text-lg opacity-90 mb-4">Tap "Open Mobile Camera" to capture photos directly</p>
-                  <div className="text-sm opacity-75">
-                    <p>✅ Works on Android & iPhone</p>
-                    <p>✅ Direct camera access</p>
-                    <p>✅ High quality photos</p>
-                  </div>
+            {/* Mobile Camera Interface */}
+            <div className="w-full rounded-lg shadow-2xl border-2 border-white/20 bg-gradient-to-br from-purple-900/50 to-pink-900/50 backdrop-blur-lg flex items-center justify-center"
+              style={{
+                height: '60vh',
+                minHeight: '400px',
+                maxHeight: '60vh'
+              }}
+            >
+              <div className="text-center text-white p-8">
+                <div className="text-6xl mb-4">📱</div>
+                <h3 className="text-2xl font-bold mb-2">Mobile Camera Mode</h3>
+                <p className="text-lg opacity-90 mb-4">Tap "Take Photo" to capture photos directly</p>
+                <div className="text-sm opacity-75">
+                  <p>✅ Works on Android & iPhone</p>
+                  <p>✅ Direct camera access</p>
+                  <p>✅ High quality photos</p>
                 </div>
               </div>
-            )}
+            </div>
 
             {/* Frame overlay to help users stay in frame */}
             <div className="absolute inset-2 border-2 border-white/30 rounded-lg pointer-events-none"></div>
 
 
 
-            {/* Camera Switching Indicator */}
-            {isSwitchingCamera && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/80 backdrop-blur-sm rounded-2xl">
-                <div className="text-center text-white">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-                  <p className="text-lg font-semibold">Switching Camera...</p>
-                  <p className="text-sm opacity-75">Please wait a moment</p>
-                </div>
-              </div>
-            )}
+            {/* Camera switching indicator removed */}
 
             {/* Next Photo Message */}
               {showNextPhotoMessage && (
@@ -1804,47 +1289,9 @@ export default function CapturePage() {
                 ))}
             </div>
 
-            {/* Enhanced Capture Button - Mobile Optimized */}
-            {!useMobileCamera && (
-              <div className="mt-2 sm:mt-3 mobile-controls desktop-capture-spacing">
-                <button
-                  onClick={startCapture}
-                  disabled={steps >= 3 || isProcessing}
-                  className={`w-full py-3 sm:py-3 md:py-3 px-4 rounded-xl sm:rounded-2xl font-bold text-lg sm:text-base md:text-lg transition-all duration-300 transform relative overflow-hidden mobile-button ${
-                    steps >= 3 || isProcessing
-                      ? 'bg-gradient-to-r from-gray-500 to-gray-600 cursor-not-allowed text-gray-200'
-                      : 'bg-gradient-to-r from-green-500 via-blue-500 to-purple-500 hover:from-green-600 hover:via-blue-600 hover:to-purple-600 text-white shadow-2xl hover:shadow-blue-500/25 hover:scale-105 active:scale-95 border border-white/30'
-                  }`}
-                >
-                  <div className="relative z-10 flex items-center justify-center space-x-3">
-                    {isProcessing ? (
-                      <>
-                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
-                        <span className="text-lg sm:text-base md:text-lg">Processing...</span>
-                      </>
-                    ) : (
-                      <>
-                        <span className="text-2xl sm:text-2xl">{steps >= 3 ? '✅' : '📸'}</span>
-                        <span className="text-lg sm:text-base md:text-lg">{steps >= 3 ? 'All Photos Captured!' : 'Capture Photo'}</span>
-                      </>
-                    )}
-                  </div>
-                </button>
-              </div>
-            )}
+            {/* Live camera capture button removed */}
 
-            {/* Mobile Camera Toggle */}
-            <div className="mt-4 sm:mt-6 flex justify-center">
-              <button
-                onClick={() => setUseMobileCamera(!useMobileCamera)}
-                className="px-4 py-2 bg-white/10 hover:bg-white/20 backdrop-blur-lg rounded-xl text-white transition-all duration-300 transform hover:scale-105 active:scale-95 border border-white/20 hover:border-white/30 text-sm font-medium"
-              >
-                {useMobileCamera ? '📹 Use Live Camera' : '📱 Use Mobile Camera'}
-              </button>
-            </div>
-
-            {/* Mobile Camera Input */}
-            {useMobileCamera && (
+            {/* Mobile Camera Input - Now Default */}
               <div className="mt-4 sm:mt-6 mobile-controls">
                 <button
                   onClick={() => {
@@ -1890,7 +1337,6 @@ export default function CapturePage() {
                   style={{ display: "none" }}
                 />
               </div>
-            )}
 
             {/* Submit Strip Button */}
             <div className="mt-6 sm:mt-8 mobile-controls desktop-submit-spacing">
@@ -1919,37 +1365,7 @@ export default function CapturePage() {
               </button>
             </div>
 
-            {/* Camera Switch Button - Mobile Optimized */}
-            {!useMobileCamera && (
-              <div className="mt-4 sm:mt-5 mobile-controls desktop-switch-spacing">
-                <button
-                  onClick={switchCamera}
-                  disabled={isProcessing || isSwitchingCamera}
-                  className={`w-full py-4 sm:py-3 px-4 backdrop-blur-lg rounded-xl text-white font-medium transition-all duration-300 transform border mobile-camera-switch ${
-                    isProcessing || isSwitchingCamera
-                      ? 'bg-gray-500/20 cursor-not-allowed border-gray-500/30'
-                      : 'bg-white/10 hover:bg-white/20 hover:scale-105 active:scale-95 border-white/20 hover:border-white/30'
-                  }`}
-                >
-                <div className="flex items-center justify-center space-x-2 sm:space-x-3">
-                  {isSwitchingCamera ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      <span className="text-base sm:text-sm md:text-base">Switching Camera...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="text-xl">🔄</span>
-                      <span className="text-base sm:text-sm md:text-base">Switch to {currentCamera === 'user' ? 'Back' : 'Front'} Camera</span>
-                      <span className="text-xs sm:text-sm opacity-75 hidden sm:inline">
-                        ({currentCamera === 'user' ? 'Front' : 'Back'} Active)
-                      </span>
-                    </>
-                  )}
-                </div>
-              </button>
-              </div>
-            )}
+            {/* Camera switch button removed */}
 
 
           </div>
