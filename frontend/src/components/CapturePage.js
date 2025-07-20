@@ -799,7 +799,11 @@ export default function CapturePage() {
         throw new Error('No photos captured');
       }
 
-      // Get canvas data immediately - no complex validation
+      // CRITICAL FIX: Force redraw all photos before submission
+      console.log('🔄 Ensuring all photos are drawn before submission...');
+      await forceCanvasRedrawWithPhotos();
+
+      // Get canvas data after ensuring all photos are drawn
       const dataUrl = canvasRef.current.toDataURL("image/jpeg", 0.8);
       console.log('� Canvas data size:', (dataUrl.length / 1024).toFixed(1), 'KB');
 
