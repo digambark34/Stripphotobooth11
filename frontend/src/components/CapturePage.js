@@ -799,9 +799,36 @@ export default function CapturePage() {
         throw new Error('No photos captured');
       }
 
-      // CRITICAL FIX: Force redraw all photos before submission
-      console.log('🔄 Ensuring all photos are drawn before submission...');
-      await forceCanvasRedrawWithPhotos();
+      // SIMPLE FIX: Quick redraw without complex validation
+      console.log('🔄 Quick redraw before submission...');
+      const ctx = canvasRef.current.getContext('2d');
+
+      // Quick template redraw
+      if (settings.template) {
+        const templateImg = new Image();
+        templateImg.crossOrigin = 'anonymous';
+        await new Promise((resolve) => {
+          templateImg.onload = () => {
+            ctx.drawImage(templateImg, 0, 0, 660, 1800);
+            resolve();
+          };
+          templateImg.onerror = () => resolve(); // Continue even if template fails
+          templateImg.src = settings.template;
+        });
+      }
+
+      // Quick photo redraw - draw all captured photos immediately
+      for (let i = 0; i < capturedPhotos.length; i++) {
+        const photo = capturedPhotos[i];
+        const photoImg = new Image();
+        photoImg.src = photo.data;
+        // Draw synchronously - photos are already loaded as data URLs
+        ctx.drawImage(photoImg, 0, 0, 520, 385, photo.x, photo.y, 520, 385);
+        console.log(`✅ Quick redraw: Photo ${i + 1} drawn`);
+      }
+
+      // Add borders
+      addBeautifulText(ctx);
 
       // Get canvas data after ensuring all photos are drawn
       const dataUrl = canvasRef.current.toDataURL("image/jpeg", 0.8);
