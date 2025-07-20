@@ -3,41 +3,19 @@ import axios from "axios";
 import axiosRetry from 'axios-retry';
 import './MobileCamera.css';
 
-// Configure axios retry with mobile-optimized settings
+// Configure axios retry with enhanced UX and smart retry logic
 axiosRetry(axios, {
-  retries: 5, // More retries for mobile
+  retries: 3,
   retryDelay: (retryCount, error) => {
-    // Get network information
-    const connection = navigator.connection || {};
-    const isSlowConnection = connection.effectiveType === 'slow-2g' || 
-                           connection.effectiveType === '2g' ||
-                           connection.downlink < 0.5;
-
-    // Log retry attempts with network info
-    console.warn(`🔄 Retry attempt ${retryCount}/5:`, {
-      error: error.message,
-      networkType: connection.effectiveType,
-      downlink: connection.downlink,
-      online: navigator.onLine
-    });
-
-    // Longer delays for slow connections
-    const baseDelay = axiosRetry.exponentialDelay(retryCount);
-    return isSlowConnection ? baseDelay * 2 : baseDelay;
+    // Log retry attempts for debugging
+    console.warn(`🔄 Retry attempt ${retryCount}/3 due to:`, error.message);
+    return axiosRetry.exponentialDelay(retryCount);
   },
   retryCondition: (error) => {
-    // Enhanced retry conditions
-    const shouldRetry = 
-      axiosRetry.isNetworkOrIdempotentRequestError(error) ||
-      (error.response && error.response.status >= 500) ||
-      error.code === 'ECONNABORTED' ||
-      !navigator.onLine ||
-      (error.response && error.response.status === 429);
-
-    // Don't retry if the file is clearly too large
-    if (error.response?.status === 413) return false;
-    
-    return shouldRetry;
+    // Smart retry: Only retry on network errors and 5xx server errors
+    // Don't retry on 400 (Bad Request), 401 (Unauthorized), 403 (Forbidden), 404 (Not Found)
+    return axiosRetry.isNetworkOrIdempotentRequestError(error) ||
+           (error.response && error.response.status >= 500);
   }
 });
 
@@ -813,366 +791,52 @@ export default function CapturePage() {
 
     try {
       setIsSubmitting(true);
-      setIsCanvasProtected(true); // CRITICAL: Protect canvas from being cleared
       setNotification(null);
+      console.log('🚀 SIMPLE SUBMIT: Starting upload...');
 
-      console.log('🚀 Starting strip submission...');
-      console.log('📊 Captured photos count:', capturedPhotos.length);
-      console.log('🎨 Template available:', !!settings.template);
-      console.log('📝 Event name: removed');
-      setRetryStatus(null); // Clear any previous retry status
-
-      // CRITICAL: Validate canvas has content before submitting
-      if (!canvasRef.current) {
-        throw new Error('Canvas not available');
+      // Basic validation only
+      if (!canvasRef.current || capturedPhotos.length === 0) {
+        throw new Error('No photos captured');
       }
 
-      // CRITICAL: Ensure we have captured photos before submission
-      if (capturedPhotos.length === 0) {
-        throw new Error('No photos captured - cannot submit blank strip');
-      }
+      // Get canvas data immediately - no complex validation
+      const dataUrl = canvasRef.current.toDataURL("image/jpeg", 0.8);
+      console.log('� Canvas data size:', (dataUrl.length / 1024).toFixed(1), 'KB');
 
-      console.log(`🔍 Pre-submission validation: ${capturedPhotos.length} photos captured`);
-
-      // Wait for canvas to be fully rendered (CRITICAL: Longer wait for photo loading)
-      console.log('⏳ Waiting for canvas to be fully rendered...');
-      console.log('🔍 Canvas ready state:', isCanvasReady);
-      console.log('📊 Captured photos count:', capturedPhotos.length);
-
-      // CRITICAL FIX: Wait longer and check canvas ready state
-      let waitTime = 2000; // Start with 2 seconds
-      if (capturedPhotos.length > 0) {
-        waitTime = 3000; // 3 seconds if we have photos to ensure they're loaded
-      }
-
-      await new Promise(resolve => setTimeout(resolve, waitTime));
-
-      // Additional wait if canvas is not ready
-      if (!isCanvasReady && capturedPhotos.length > 0) {
-        console.log('⏳ Canvas not ready, waiting additional time...');
-        await new Promise(resolve => setTimeout(resolve, 2000)); // Additional 2 seconds
-      }
-
-      // CRITICAL: Force canvas redraw with all photos before submission
-      console.log('🔄 Force redrawing canvas with all photos before submission...');
-      await forceCanvasRedrawWithPhotos();
-
-      // Double-check canvas is still ready
-      if (!canvasRef.current) {
-        throw new Error('Canvas not ready after delay');
-      }
-
-      // Validate canvas has actual content (not just blank)
-      const ctx = canvasRef.current.getContext('2d');
-
-      let hasContent = false;
-      let imageData = null;
-
-      try {
-        imageData = ctx.getImageData(0, 0, canvasRef.current.width, canvasRef.current.height);
-        const pixels = imageData.data;
-
-        // ENHANCED: Check specific photo box areas for content
-        const photoPositions = [90, 515, 940];
-        const photoWidth = 520;
-        const photoHeight = 385;
-        const photoX = (660 - photoWidth) / 2;
-
-        let photosDetected = 0;
-
-        // Check each photo box area for non-template content
-        for (let boxIndex = 0; boxIndex < photoPositions.length; boxIndex++) {
-          const photoY = photoPositions[boxIndex];
-          let boxHasContent = false;
-
-          // Sample pixels in the center of each photo box
-          const sampleX = photoX + photoWidth / 2;
-          const sampleY = photoY + photoHeight / 2;
-          const pixelIndex = (Math.floor(sampleY) * 660 + Math.floor(sampleX)) * 4;
-
-          if (pixelIndex < pixels.length) {
-            const r = pixels[pixelIndex];
-            const g = pixels[pixelIndex + 1];
-            const b = pixels[pixelIndex + 2];
-            const a = pixels[pixelIndex + 3];
-
-            // Check if pixel is not just template background
-            if (a > 0 && (r !== 0 || g !== 0 || b !== 0)) {
-              boxHasContent = true;
-              photosDetected++;
-            }
-          }
-
-          console.log(`📊 Photo box ${boxIndex + 1} content detected: ${boxHasContent}`);
-        }
-
-        hasContent = photosDetected > 0;
-        console.log(`📊 Enhanced validation: ${photosDetected}/${capturedPhotos.length} photos detected in canvas`);
-
-        // If we have captured photos but none detected, this is a problem
-        if (capturedPhotos.length > 0 && photosDetected === 0) {
-          console.error('❌ CRITICAL: Photos captured but none detected in canvas!');
-          hasContent = false; // Force redraw
-        }
-
-      } catch (error) {
-        console.warn('⚠️ Canvas tainted, cannot validate content with getImageData:', error.message);
-        console.log('🔍 Canvas taint debug info:', {
-          hasTemplate: !!settings.template,
-          templateUrl: settings.template ? settings.template.substring(0, 100) + '...' : 'none',
-          capturedPhotosCount: capturedPhotos.length,
-          useMobileCamera: useMobileCamera
-        });
-        // If canvas is tainted, assume it has content if we have captured photos
-        hasContent = capturedPhotos.length > 0;
-        console.log(`📊 Assuming content based on captured photos: ${hasContent}`);
-      }
-
-      if (!hasContent) {
-        console.error('❌ Canvas appears to be blank - FORCING REDRAW');
-        console.log('🔍 Canvas debug info:', {
-          width: canvasRef.current.width,
-          height: canvasRef.current.height,
-          capturedPhotosCount: capturedPhotos.length,
-          isCanvasReady: isCanvasReady,
-          hasTemplate: !!settings.template
-        });
-
-        // CRITICAL: If we have photos but canvas is blank, force redraw
-        if (capturedPhotos.length > 0) {
-          console.log('🔄 CRITICAL: Forcing emergency canvas redraw...');
-          await forceCanvasRedrawWithPhotos();
-
-          // Re-validate after forced redraw
-          console.log('🔍 Re-validating canvas after emergency redraw...');
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        } else {
-          throw new Error('No photos captured - cannot submit blank strip');
-        }
-
-        // CRITICAL FIX: Force synchronous canvas redraw
-        console.log('🔄 Attempting to redraw canvas synchronously...');
-        if (capturedPhotos.length > 0) {
-          const ctx = canvasRef.current.getContext('2d');
-
-          try {
-            if (settings.template) {
-              // Force synchronous redraw with template
-              const templateImg = new Image();
-              templateImg.crossOrigin = 'anonymous';
-
-              // Use synchronous approach with Promise
-              await new Promise((resolve, reject) => {
-                templateImg.onload = async () => {
-                  try {
-                    ctx.clearRect(0, 0, 660, 1800);
-                    ctx.drawImage(templateImg, 0, 0, 660, 1800);
-
-                    // Synchronously load and draw all photos
-                    const photoPromises = capturedPhotos.map((photo, index) => {
-                      return new Promise((photoResolve) => {
-                        const photoImg = new Image();
-                        photoImg.crossOrigin = 'anonymous';
-                        photoImg.onload = () => {
-                          ctx.drawImage(photoImg, 0, 0, 520, 385, photo.x, photo.y, 520, 385);
-                          console.log(`🔄 Force redrawn photo ${index + 1} at x:${photo.x}, y:${photo.y}`);
-                          photoResolve();
-                        };
-                        photoImg.onerror = () => {
-                          console.error(`❌ Failed to force redraw photo ${index + 1}`);
-                          photoResolve();
-                        };
-                        photoImg.src = photo.data;
-                      });
-                    });
-
-                    await Promise.all(photoPromises);
-                    addBeautifulText(ctx);
-                    console.log('✅ Force redraw completed');
-                    resolve();
-                  } catch (error) {
-                    reject(error);
-                  }
-                };
-                templateImg.onerror = () => reject(new Error('Template load failed'));
-                templateImg.src = settings.template;
-              });
-            } else {
-              // No template - use default background
-              createDefaultBackground(ctx, 660, 1800);
-
-              // Draw all photos synchronously
-              const photoPromises = capturedPhotos.map((photo, index) => {
-                return new Promise((photoResolve) => {
-                  const photoImg = new Image();
-                  photoImg.onload = () => {
-                    ctx.drawImage(photoImg, 0, 0, 520, 385, photo.x, photo.y, 520, 385);
-                    console.log(`🔄 Force redrawn photo ${index + 1} (no template)`);
-                    photoResolve();
-                  };
-                  photoImg.onerror = () => {
-                    console.error(`❌ Failed to force redraw photo ${index + 1}`);
-                    photoResolve();
-                  };
-                  photoImg.src = photo.data;
-                });
-              });
-
-              await Promise.all(photoPromises);
-              addBeautifulText(ctx);
-              console.log('✅ Force redraw completed (no template)');
-            }
-
-            // Wait a bit more after forced redraw
-            await new Promise(resolve => setTimeout(resolve, 1000));
-
-          } catch (error) {
-            console.error('❌ Force redraw failed:', error);
-          }
-        }
-
-        throw new Error('Canvas appears to be blank - no photos detected');
-      }
-
-      console.log('✅ Canvas validation passed - content detected');
-
-      // FINAL VALIDATION: Ensure we still have the expected number of photos
-      if (capturedPhotos.length === 0) {
-        throw new Error('CRITICAL: No photos in capturedPhotos array before extraction');
-      }
-
-      console.log(`✅ Final validation: ${capturedPhotos.length} photos confirmed before data extraction`);
-
-      let dataUrl;
-      try {
-        dataUrl = canvasRef.current.toDataURL("image/jpeg", 0.8);
-      } catch (error) {
-        console.error('❌ Canvas tainted, attempting to create clean canvas:', error.message);
-
-        // Create a new clean canvas and redraw everything
-        try {
-          const cleanCanvas = document.createElement('canvas');
-          cleanCanvas.width = 660;
-          cleanCanvas.height = 1800;
-          const cleanCtx = cleanCanvas.getContext('2d');
-
-          console.log('🔄 Creating clean canvas for mobile photos...');
-
-          // Draw default background
-          createDefaultBackground(cleanCtx, 660, 1800);
-
-          // Draw all captured photos synchronously
-          const photoPromises = capturedPhotos.map((photo, index) => {
-            return new Promise((resolve) => {
-              const photoImg = new Image();
-              photoImg.onload = () => {
-                cleanCtx.drawImage(photoImg, 0, 0, 520, 385, photo.x, photo.y, 520, 385);
-                console.log(`✅ Clean canvas: photo ${index + 1} drawn at x:${photo.x}, y:${photo.y}`);
-                resolve();
-              };
-              photoImg.onerror = () => {
-                console.error(`❌ Failed to load photo ${index + 1} for clean canvas`);
-                resolve();
-              };
-              photoImg.src = photo.data;
-            });
-          });
-
-          // Wait for all photos to be drawn
-          await Promise.all(photoPromises);
-
-          // Add text
-          addBeautifulText(cleanCtx);
-
-          // Extract data from clean canvas
-          dataUrl = cleanCanvas.toDataURL("image/jpeg", 0.8);
-          console.log('✅ Clean canvas created successfully');
-
-        } catch (cleanError) {
-          console.error('❌ Failed to create clean canvas:', cleanError.message);
-          throw new Error('Canvas is tainted and clean canvas creation failed. Please refresh and try again.');
-        }
-      }
-
-      // Validate the generated image data
-      if (!dataUrl || dataUrl.length < 10000) {
-        throw new Error('Generated image appears to be blank or too small');
-      }
-
-      console.log(`📤 Submitting photo strip, data size: ${(dataUrl.length / 1024).toFixed(1)}KB`);
-
-      // Create a custom axios instance for this upload with retry status updates
-      const uploadAxios = axios.create({
-        timeout: 60000 // 60 second timeout only for photo uploads (large files)
-      });
-
-      // Configure retry with status updates for this specific request
-      axiosRetry(uploadAxios, {
-        retries: 3,
-        retryDelay: (retryCount, error) => {
-          console.warn(`🔄 Upload retry ${retryCount}/3 due to:`, error.message);
-          setRetryStatus(`Retrying upload (${retryCount}/3)...`);
-          return axiosRetry.exponentialDelay(retryCount);
-        },
-        retryCondition: (error) => {
-          // Smart retry: Only retry on network errors and 5xx server errors
-          return axiosRetry.isNetworkOrIdempotentRequestError(error) ||
-                 (error.response && error.response.status >= 500);
-        }
-      });
-
-      await uploadAxios.post(`${API_BASE_URL}/api/strips`, {
+      // Simple upload with timeout
+      const response = await axios.post(`${API_BASE_URL}/api/strips`, {
         image: dataUrl,
         template: settings.template
+      }, {
+        timeout: 60000 // 60 second timeout
       });
 
-      setRetryStatus(null); // Clear retry status on success
+      console.log('✅ Upload successful!');
       setNotification({
         type: "success",
         message: "✅ Thank you! Your photo strip has been sent for print."
       });
 
-      // CRITICAL FIX: Don't clear canvas immediately after submission
-      // Wait a bit before clearing to ensure upload is complete
-      setTimeout(() => {
-        setIsCanvasProtected(false); // Unprotect canvas
-        setSteps(0);
-        setCapturedPhotos([]); // Clear captured photos
-        setIsCanvasReady(false); // Reset canvas ready state
-        initializeCanvas(); // Clear and reinitialize with background
-        console.log('🔄 Canvas cleared after successful submission');
-      }, 2000); // Wait 2 seconds before clearing
+      // Reset everything immediately
+      setSteps(0);
+      setCapturedPhotos([]);
+      setIsCanvasReady(false);
+      initializeCanvas();
+
+      return;
     } catch (error) {
-      console.error("❌ Upload failed after retries:", {
-        error: error.message,
-        url: error.config?.url,
-        status: error.response?.status,
-        data: error.config?.data ? 'Photo data present' : 'No data'
-      });
-
-      setRetryStatus(null); // Clear retry status on final failure
-
-      // Provide specific error messages based on error type
-      let errorMessage = "❌ Upload failed. Please try again.";
-      if (error.code === 'ECONNABORTED') {
-        errorMessage = "❌ Upload timed out. Please check your connection and try again.";
-      } else if (error.response?.status === 413) {
-        errorMessage = "❌ Photo too large. Please try again.";
-      } else if (error.response?.status >= 500) {
-        errorMessage = "❌ Server error. Please try again in a moment.";
-      } else if (!navigator.onLine) {
-        errorMessage = "❌ No internet connection. Please check your network.";
-      }
-
+      console.error('❌ Simple submit error:', error.message);
       setNotification({
         type: "error",
-        message: errorMessage
+        message: "❌ Upload failed. Please try again."
       });
     } finally {
       setIsSubmitting(false);
-      setIsCanvasProtected(false); // Unprotect canvas even if submission fails
     }
   };
+
+
+
 
 
 
