@@ -3,19 +3,41 @@ import axios from "axios";
 import axiosRetry from 'axios-retry';
 import './MobileCamera.css';
 
-// Configure axios retry with enhanced UX and smart retry logic
+// Configure axios retry with mobile-optimized settings
 axiosRetry(axios, {
-  retries: 3,
+  retries: 5, // More retries for mobile
   retryDelay: (retryCount, error) => {
-    // Log retry attempts for debugging
-    console.warn(`🔄 Retry attempt ${retryCount}/3 due to:`, error.message);
-    return axiosRetry.exponentialDelay(retryCount);
+    // Get network information
+    const connection = navigator.connection || {};
+    const isSlowConnection = connection.effectiveType === 'slow-2g' || 
+                           connection.effectiveType === '2g' ||
+                           connection.downlink < 0.5;
+
+    // Log retry attempts with network info
+    console.warn(`🔄 Retry attempt ${retryCount}/5:`, {
+      error: error.message,
+      networkType: connection.effectiveType,
+      downlink: connection.downlink,
+      online: navigator.onLine
+    });
+
+    // Longer delays for slow connections
+    const baseDelay = axiosRetry.exponentialDelay(retryCount);
+    return isSlowConnection ? baseDelay * 2 : baseDelay;
   },
   retryCondition: (error) => {
-    // Smart retry: Only retry on network errors and 5xx server errors
-    // Don't retry on 400 (Bad Request), 401 (Unauthorized), 403 (Forbidden), 404 (Not Found)
-    return axiosRetry.isNetworkOrIdempotentRequestError(error) ||
-           (error.response && error.response.status >= 500);
+    // Enhanced retry conditions
+    const shouldRetry = 
+      axiosRetry.isNetworkOrIdempotentRequestError(error) ||
+      (error.response && error.response.status >= 500) ||
+      error.code === 'ECONNABORTED' ||
+      !navigator.onLine ||
+      (error.response && error.response.status === 429);
+
+    // Don't retry if the file is clearly too large
+    if (error.response?.status === 413) return false;
+    
+    return shouldRetry;
   }
 });
 

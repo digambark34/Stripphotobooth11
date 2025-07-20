@@ -5,7 +5,7 @@ exports.uploadStrip = async (req, res) => {
   try {
     const { image, template } = req.body;
 
-    // ✅ Enhanced Validation
+    // ✅ Enhanced Validation with size checks
     if (!image) {
       return res.status(400).json({ message: "❌ Image data is missing" });
     }
@@ -14,11 +14,25 @@ exports.uploadStrip = async (req, res) => {
       return res.status(400).json({ message: "❌ Invalid image format" });
     }
 
-    // ✅ Upload main image to Cloudinary
+    // Check image size (max 10MB)
+    const base64Str = image.split(',')[1];
+    const sizeInBytes = Buffer.from(base64Str, 'base64').length;
+    if (sizeInBytes > 10 * 1024 * 1024) {
+      return res.status(413).json({ 
+        message: "❌ Image too large. Maximum size is 10MB",
+        size: sizeInBytes
+      });
+    }
+
+    // ✅ Upload main image to Cloudinary with mobile optimizations
     const uploadResult = await cloudinary.uploader.upload(image, {
       folder: 'strip-photobooth',
       public_id: `strip_${Date.now()}`,
-      resource_type: 'image'
+      resource_type: 'image',
+      timeout: 60000, // 60 second timeout
+      quality: 'auto:good', // Automatic quality optimization
+      fetch_format: 'auto', // Auto-select best format
+      flags: 'progressive', // Progressive loading for better mobile experience
     });
 
     console.log(`✅ Strip uploaded to Cloudinary: ${uploadResult.secure_url}`);

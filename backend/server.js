@@ -6,6 +6,10 @@ const stripRoutes = require("./routes/stripRoutes");
 const settingsRoutes = require("./routes/settingsRoutes");
 const healthRoutes = require("./routes/healthRoutes");
 
+// Configure body parser limits for handling photo uploads
+express.json({ limit: '10mb' });
+express.urlencoded({ limit: '10mb', extended: true });
+
 // ✅ Fix: Set strictQuery AFTER mongoose import
 mongoose.set('strictQuery', true);
 
@@ -36,6 +40,24 @@ mongoose.connect(mongoUri, {
 
 // ✅ Initialize Express App
 const app = express();
+
+// 🚨 CRITICAL: PRIORITY CORS FIX - Must be FIRST (before all other middleware)
+app.use((req, res, next) => {
+  // Set CORS headers for ALL requests immediately
+  res.header('Access-Control-Allow-Origin', 'https://stripphotobooth11.netlify.app');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With,Accept,Origin');
+
+  console.log(`🚨 EMERGENCY CORS applied for: ${req.headers.origin || 'no-origin'} -> ${req.method} ${req.path}`);
+
+  if (req.method === 'OPTIONS') {
+    console.log('🚨 EMERGENCY OPTIONS handled');
+    return res.status(200).end();
+  }
+
+  next();
+});
 
 // ✅ Local Development CORS Configuration
 app.use(cors({
@@ -75,6 +97,37 @@ app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 // ✅ Request logging
 app.use((req, _res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+  next();
+});
+
+// ✅ UNIVERSAL CORS FIX - Works for ALL devices (iPhone + Android)
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+
+  // Allow your Netlify domain and localhost for testing
+  const allowedOrigins = [
+    'https://stripphotobooth11.netlify.app',
+    'http://localhost:3000',
+    'http://127.0.0.1:3000'
+  ];
+
+  if (allowedOrigins.includes(origin) || !origin) {
+    res.header('Access-Control-Allow-Origin', origin || '*');
+  }
+
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With,Accept,Origin');
+  res.header('Access-Control-Max-Age', '86400'); // 24 hours
+
+  console.log(`🌐 CORS headers set for origin: ${origin || 'no-origin'}`);
+
+  // Handle preflight OPTIONS requests
+  if (req.method === 'OPTIONS') {
+    console.log('✈️ Preflight OPTIONS request handled');
+    return res.status(200).end();
+  }
+
   next();
 });
 
